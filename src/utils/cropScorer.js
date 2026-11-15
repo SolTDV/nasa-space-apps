@@ -1,9 +1,5 @@
-// Pure NASA POWER crop environmental fit (no soil chemistry or market guessing),
-// plus a small economics helper shared by the Economics tab and the rotation engine.
-//
-// Scoring is evaluated over each crop's GROWING-SEASON WINDOW (contiguous months whose
-// temperatures best suit the crop), so a warm-season crop in Iowa is not judged against
-// January. Rainfall is the growing-season total; GWETROOT and solar are window means.
+// Pure NASA POWER + FAO GAEZ management-aware crop environmental fit,
+// plus economics helper shared by EconomicsTab and rotationEngine.
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const sum = (arr) => arr.reduce((s, v) => s + v, 0);
@@ -26,7 +22,7 @@ export function thermalFitForTemp(t, optimal, lethal) {
 export function rainFitForMm(rainMm, optimalMm, minMm) {
   if (rainMm >= optimalMm) return 100;
   if (rainMm >= minMm) return 30 + 70 * ((rainMm - minMm) / (optimalMm - minMm));
-  return 30 * Math.pow(Math.max(rainMm, 0) / minMm, 2); // drops rapidly below the minimum
+  return 30 * Math.pow(Math.max(rainMm, 0) / minMm, 2);
 }
 
 export function rootMoistureFit(gwet, [lo, hi]) {
@@ -41,10 +37,6 @@ export function solarFit(avgSolar, optimalSolar) {
 
 // ---------- Growing-season window ----------
 
-/**
- * Best contiguous (wrap-around) window of months for a crop, by monthly thermal suitability.
- * Ties (common when temperatures saturate at 100, e.g. the tropics) go to the wetter window.
- */
 export function getGrowingWindow(crop, monthly) {
   const n = GROWING_SEASON_MONTHS[crop.seasonType] ?? 6;
   const monthlyFit = monthly.map((m) => thermalFitForTemp(m.temp, crop.optimalTemp, crop.lethalTemp));
@@ -86,11 +78,15 @@ function emptyScore(crop) {
   };
 }
 
-/** Score one crop against climate.recent5Yr. */
-export function scoreCrop(crop, climate) {
+/**
+ * Score one crop against climate.recent5Yr.
+ * options: { waterSupply: 'rainfed' | 'irrigated' }
+ */
+export function scoreCrop(crop, climate, options = {}) {
   const monthly = climate?.recent5Yr?.monthly;
   if (!monthly || monthly.length !== 12) return emptyScore(crop);
 
+  const isIrrigated = options.waterSupply === 'irrigated';
   const idx = getGrowingWindow(crop, monthly);
   const win = idx.map((i) => monthly[i]);
 
@@ -101,10 +97,16 @@ export function scoreCrop(crop, climate) {
   const avgGwetRoot = mean(win.map((m) => m.gwetRoot));
   const avgSolar = mean(win.map((m) => m.solar));
 
-  const hardZero = minTempC < crop.lethalTemp[0] || maxTempC > crop.lethalTemp[1];
+  // Check mean growing-season temperature against lethal bounds (with a 3°C buffer for afternoon highs)
+  const hardZero = avgTempC < crop.lethalTemp[0] || avgTempC > crop.lethalTemp[1] || maxTempC > crop.lethalTemp[1] + 4;
   const thermal = hardZero ? 0 : thermalFitForTemp(avgTempC, crop.optimalTemp, crop.lethalTemp);
-  const rain = rainFitForMm(growingSeasonRainMm, crop.optimalRainMm, crop.minRainMm);
-  const moisture = rootMoistureFit(avgGwetRoot, crop.optimalGwetRoot);
+
+  const rawRain = rainFitForMm(growingSeasonRainMm, crop.optimalRainMm, crop.minRainMm);
+  const rawMoisture = rootMoistureFit(avgGwetRoot, crop.optimalGwetRoot);
+
+  // Under irrigated management, supplemental water buffers seasonal rainfall deficits
+  const rain = isIrrigated ? Math.max(rawRain, 92) : rawRain;
+  const moisture = isIrrigated ? Math.max(rawMoisture, 90) : rawMoisture;
   const solar = solarFit(avgSolar, crop.optimalSolar);
 
   const envScore = Math.round(
@@ -113,7 +115,11 @@ export function scoreCrop(crop, climate) {
       FIT_WEIGHTS.rootMoisture * moisture +
       FIT_WEIGHTS.solar * solar
   );
-  const yieldMultiplier = thermal === 0 ? 0 : Math.max(0.2, envScore / 100);
+
+  // Map 85%+ environmental suitability to ~100% attainable FAOSTAT regional yield
+  const irrigationYieldBoost = isIrrigated ? 1.12 : 1.0;
+  const attainableFraction = Math.min(1.08, (envScore / 85) * irrigationYieldBoost);
+  const yieldMultiplier = thermal === 0 ? 0 : Math.max(0.25, attainableFraction);
 
   const components = [
     ['Temperature', thermal],
@@ -135,7 +141,6 @@ export function scoreCrop(crop, climate) {
     growingSeasonRainMm: Math.round(growingSeasonRainMm),
     heatShockMonths: win.filter((m) => m.maxTemp > crop.heatShockThresholdC).length,
     limitingFactor,
-    // Where the farm sits vs. each crop's band (for the range-bar visuals)
     bands: {
       temp: { value: Math.round(avgTempC * 10) / 10, optimal: crop.optimalTemp, lethal: crop.lethalTemp },
       rain: { value: Math.round(growingSeasonRainMm), optimal: crop.optimalRainMm, min: crop.minRainMm },
@@ -145,9 +150,9 @@ export function scoreCrop(crop, climate) {
 }
 
 /** Score every crop and return them ranked by envScore (desc). */
-export function scoreAllCrops(crops, climate) {
+export function scoreAllCrops(crops, climate, options = {}) {
   return crops
-    .map((crop) => ({ crop, score: scoreCrop(crop, climate) }))
+    .map((crop) => ({ crop, score: scoreCrop(crop, climate, options) }))
     .sort((a, b) => b.score.envScore - a.score.envScore || a.crop.name.localeCompare(b.crop.name));
 }
 
@@ -159,21 +164,17 @@ export const DISTANCE_OPTIONS = [
   { id: 'over100', label: '> 100 km' },
 ];
 
-// Share of revenue lost to spoilage / transport by market distance.
 const MARKET_HAIRCUT = {
   perishable: { under20: 0, '20to100': 0.08, over100: 0.25 },
   storable: { under20: 0, '20to100': 0, over100: 0.03 },
 };
 
+const IRRIGATION_COST_HA = { low: 45, medium: 95, high: 160 };
+
 export function volatilityBadge(pct) {
   return pct <= 12 ? 'Low' : pct <= 18 ? 'Medium' : 'High';
 }
 
-/**
- * Per-hectare economics for one crop.
- * overrides: { priceMultiplierPct = 100, costMultiplierPct = 100, distanceToMarket = 'under20',
- *              inputDiscountPct = 0 }   (inputDiscountPct = rotation nitrogen credit)
- */
 export function computeCropEconomics(crop, score, overrides = {}) {
   const {
     priceMultiplierPct = 100,
@@ -183,10 +184,15 @@ export function computeCropEconomics(crop, score, overrides = {}) {
   } = overrides;
 
   const haircut = MARKET_HAIRCUT[crop.perishability]?.[distanceToMarket] ?? 0;
-  const yieldTha = crop.faostatYieldTha * (score?.yieldMultiplier ?? 0);
+  const rawMult = score?.yieldMultiplier ?? 0;
+  const yieldTha = crop.faostatYieldTha * rawMult;
   const priceUsdT = crop.faostatPriceUsdT * (priceMultiplierPct / 100) * (1 - haircut);
-  const baseCostHa = crop.benchmarkInputCostHa * (costMultiplierPct / 100);
+
+  // Split input costs into 55% upfront (seed/prep) + 45% yield-dependent (fertilizer top-up/harvest/packing)
+  const costScale = 0.55 + 0.45 * Math.min(1, rawMult);
+  const baseCostHa = crop.benchmarkInputCostHa * costScale * (costMultiplierPct / 100);
   const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100);
+
   const revenueHa = yieldTha * priceUsdT;
   const netMarginHa = revenueHa - inputCostHa;
   const waterMm = Math.max(1, Math.min(score?.growingSeasonRainMm ?? 0, crop.optimalRainMm));
