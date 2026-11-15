@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { min-height: 100%; }
+body { @apply bg-slate-950 text-slate-100 antialiased; }
+
+/* Custom Leaflet divIcon pin (avoids default PNG icon path issues under Vite) */
+.fs-pin {
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  background: #10b981;
+  border: 3px solid #ecfdf5;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+.fs-pin::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #064e3b;
+}
+.leaflet-container { background: #0f172a; font-family: inherit; }
