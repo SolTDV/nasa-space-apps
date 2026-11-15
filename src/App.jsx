@@ -11,6 +11,7 @@ import {
   Repeat,
   SlidersHorizontal,
   Sprout,
+  TrendingUp,
   TriangleAlert,
   Waves,
 } from 'lucide-react';
@@ -24,12 +25,14 @@ import ClimateShiftTab from './components/ClimateShiftTab.jsx';
 import CropFitTab from './components/CropFitTab.jsx';
 import EconomicsTab, { DEFAULT_OVERRIDES } from './components/EconomicsTab.jsx';
 import RotationTab from './components/RotationTab.jsx';
+import FutureSimulatorTab from './components/FutureSimulatorTab.jsx';
 
 const TABS = [
   { id: 'rotation', label: '1. Rotation Plan', icon: Repeat },
   { id: 'fit', label: '2. Crop Suitability', icon: Sprout },
   { id: 'econ', label: '3. Profit & Costs', icon: Coins },
   { id: 'climate', label: '4. Weather Trends', icon: CloudSun },
+  { id: 'future', label: '5. Future Simulator', icon: TrendingUp },
 ];
 
 const inputCls =
@@ -75,7 +78,7 @@ export default function App() {
     };
   }, [lat, lon]);
 
-  const ready = climate && !climate.isWaterBody;
+  const ready = Boolean(climate && !climate.isWaterBody);
   const scored = useMemo(
     () => (ready ? scoreAllCrops(crops, climate, { waterSupply }) : []),
     [ready, climate, waterSupply]
@@ -127,8 +130,8 @@ export default function App() {
               <Leaf className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900">AgriCULTURE</h1>
-              <p className="text-xs text-slate-500">Simple Crop Rotation decision-making helperr</p>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">FieldShift</h1>
+              <p className="text-xs text-slate-500">Simple Crop Rotation &amp; Weather Advisor</p>
             </div>
           </div>
 
@@ -162,7 +165,7 @@ export default function App() {
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 font-bold text-emerald-900">
                 <HelpCircle className="h-4 w-4 text-emerald-600" />
-                How to use AgriCULTURE in 3 quick steps
+                How to use FieldShift in 3 quick steps
               </span>
               <button
                 type="button"
@@ -186,9 +189,9 @@ export default function App() {
                 </p>
               </div>
               <div className="rounded-xl bg-white/80 p-3 ring-1 ring-emerald-200/60">
-                <span className="font-bold text-emerald-700">Step 3 · Review &amp; Customize</span>
+                <span className="font-bold text-emerald-700">Step 3 · Review &amp; Simulate</span>
                 <p className="mt-1 text-slate-600">
-                  Compare your current crops against our suggested rotation, or open <strong>Profit &amp; Costs</strong> to enter your local market prices.
+                  Compare your current crops against our suggested rotation, check local prices, or test future warming in <strong>Future Simulator</strong>.
                 </p>
               </div>
             </div>
@@ -362,6 +365,17 @@ export default function App() {
               />
             )}
             {tab === 'climate' && <ClimateShiftTab climate={climate} />}
+            {tab === 'future' && (
+              <FutureSimulatorTab
+                crops={crops}
+                climate={climate}
+                baselineSequence={baselineSequence}
+                rotationLength={rotationLength}
+                waterSupply={waterSupply}
+                elevationM={siteEnv?.elevationM ?? null}
+                overrides={overrides}
+              />
+            )}
           </div>
         )}
       </main>
