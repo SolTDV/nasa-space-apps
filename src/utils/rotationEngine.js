@@ -43,7 +43,7 @@ export function buildContext(crops, climate, options = {}) {
   return {
     crops,
     cropMap: Object.fromEntries(crops.map((c) => [c.id, c])),
-    scores: Object.fromEntries(crops.map((c) => [c.id, scoreCrop(c, climate)])),
+    scores: Object.fromEntries(crops.map((c) => [c.id, scoreCrop(c, climate, { waterSupply: options.waterSupply })])),
     annualRainMm: climate?.recent5Yr?.annualRainMm ?? 0,
     soilTexture: options.soilTexture ?? 'Unknown',
     soilPh: options.soilPh ?? 'Unknown',

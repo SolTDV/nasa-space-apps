@@ -63,5 +63,10 @@ const scorching = getFallbackClimate(10.05, 105.75);
 scorching.recent5Yr.monthly = scorching.recent5Yr.monthly.map(m => ({ ...m, temp: m.temp + 14, maxTemp: m.maxTemp + 14, minTemp: m.minTemp + 14 }));
 const dead = scoreAllCrops(crops, scorching).filter(r => r.score.thermalFit === 0);
 assert(dead.length > 0 && dead.every(r => r.score.envScore <= 15 && r.score.yieldMultiplier === 0), `thermal fit 0 -> score <= 15 and 0 t/ha (${dead.length} crops)`);
+// --- irrigated mode must reach the rotation engine (same fit as the Crop Suitability tab)
+const ks = getFallbackClimate(38.48, -100.9);
+const fitIrr = scoreAllCrops(crops, ks, { waterSupply: 'irrigated' }).find(r => r.crop.id === 'maize').score.envScore;
+const rotIrr = generateRotations(crops, ks, { currentCropId: 'maize', waterSupply: 'irrigated' }).baseline.perSeason[0].envScore;
+assert(fitIrr === rotIrr, `irrigated maize fit: Crop tab ${fitIrr}% = Rotation tab ${rotIrr}%`);
 const iowa = generateRotations(crops, getFallbackClimate(42.03,-93.631), { currentCropId:'maize' });
 console.log('\nChecklist sample:', iowa.adapted[0].checklist);
