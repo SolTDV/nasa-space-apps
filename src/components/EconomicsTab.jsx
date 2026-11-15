@@ -190,6 +190,11 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
                       <div className="mt-0.5 text-[11px] text-slate-500">
                         Weather fit: {score.envScore}% · {econ.perishabilityRisk !== 'None' ? `${econ.perishabilityRisk} transport spoilage risk` : 'Easy to store & transport'}
                       </div>
+                      {econ.yieldTha === 0 && (
+                        <div className="mt-0.5 text-[11px] font-semibold text-rose-600">
+                          Too hot or too cold to grow here: no harvest expected, only seed and input costs.
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-slate-700">
                       {econ.yieldTha} t/ha

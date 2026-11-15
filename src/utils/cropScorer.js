@@ -9,6 +9,9 @@ export const GROWING_SEASON_MONTHS = { warm: 6, cool: 7 };
 
 export const FIT_WEIGHTS = { thermal: 0.35, rain: 0.3, rootMoisture: 0.2, solar: 0.15 };
 
+// Highest weather-fit score shown for a crop whose temperature fit is zero (cannot grow here).
+export const NOT_VIABLE_MAX_SCORE = 15;
+
 // ---------- Component fit functions (0-100) ----------
 
 export function thermalFitForTemp(t, optimal, lethal) {
@@ -109,12 +112,14 @@ export function scoreCrop(crop, climate, options = {}) {
   const moisture = isIrrigated ? Math.max(rawMoisture, 90) : rawMoisture;
   const solar = solarFit(avgSolar, crop.optimalSolar);
 
-  const envScore = Math.round(
+  const weightedScore = Math.round(
     FIT_WEIGHTS.thermal * thermal +
       FIT_WEIGHTS.rain * rain +
       FIT_WEIGHTS.rootMoisture * moisture +
       FIT_WEIGHTS.solar * solar
   );
+  // Too hot or too cold to grow at all: good rain and sun must not make it look like a decent fit.
+  const envScore = thermal === 0 ? Math.min(weightedScore, NOT_VIABLE_MAX_SCORE) : weightedScore;
 
   // Map 85%+ environmental suitability to ~100% attainable FAOSTAT regional yield
   const irrigationYieldBoost = isIrrigated ? 1.12 : 1.0;

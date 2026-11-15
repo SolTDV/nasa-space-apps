@@ -58,5 +58,10 @@ for (const p of DEMO_PRESETS) {
   assert(out.adapted.length === 3 && new Set(out.adapted.map(r => r.id)).size === 3, 'three distinct adapted rotations');
   assert(out.adapted.every(r => r.sequence[0] !== r.sequence[1] && r.sequence[1] !== r.sequence[2]), 'no consecutive monoculture');
 }
+// --- a crop that cannot grow (thermal fit 0) must not show a decent weather-fit score
+const scorching = getFallbackClimate(10.05, 105.75);
+scorching.recent5Yr.monthly = scorching.recent5Yr.monthly.map(m => ({ ...m, temp: m.temp + 14, maxTemp: m.maxTemp + 14, minTemp: m.minTemp + 14 }));
+const dead = scoreAllCrops(crops, scorching).filter(r => r.score.thermalFit === 0);
+assert(dead.length > 0 && dead.every(r => r.score.envScore <= 15 && r.score.yieldMultiplier === 0), `thermal fit 0 -> score <= 15 and 0 t/ha (${dead.length} crops)`);
 const iowa = generateRotations(crops, getFallbackClimate(42.03,-93.631), { currentCropId:'maize' });
 console.log('\nChecklist sample:', iowa.adapted[0].checklist);
