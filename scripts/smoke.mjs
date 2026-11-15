@@ -9,7 +9,9 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exitCode
 
 // --- schema check
 const keys = ['id','name','botanicalFamily','nitrogenRole','rootDepth','residueLevel','seasonType','waterUse','optimalTemp','lethalTemp','heatShockThresholdC','optimalRainMm','minRainMm','optimalGwetRoot','optimalSolar','soilPreference','faostatYieldTha','faostatPriceUsdT','priceVolatilityPct','benchmarkInputCostHa','perishability'];
-assert(crops.length === 12 && crops.every(c => keys.every(k => k in c)), '12 crops follow schema');
+const missing = crops.flatMap(c => keys.filter(k => !(k in c)).map(k => `${c.id}.${k}`));
+assert(crops.length >= 30 && missing.length === 0, `${crops.length} crops follow schema${missing.length ? ' (missing: ' + missing.join(', ') + ')' : ''}`);
+assert(new Set(crops.map(c => c.id)).size === crops.length, 'crop ids are unique');
 
 // --- synthetic NASA response (with -999 and YYYY13)
 function fake({ water = false } = {}) {
