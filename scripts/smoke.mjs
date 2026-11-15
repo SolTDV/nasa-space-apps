@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { parseNasaResponse, getFallbackClimate, fetchFarmClimate } from '../src/utils/nasaApi.js';
 import { scoreAllCrops } from '../src/utils/cropScorer.js';
-import { generateRotations } from '../src/utils/rotationEngine.js';
+import { generateRotations, pickForGoal, GOAL_IDS } from '../src/utils/rotationEngine.js';
 import { DEMO_PRESETS } from '../src/data/demoPresets.js';
 
 const crops = JSON.parse(fs.readFileSync('src/data/crops.json', 'utf8'));
@@ -57,6 +57,11 @@ for (const p of DEMO_PRESETS) {
   }
   assert(out.adapted.length === 3 && new Set(out.adapted.map(r => r.id)).size === 3, 'three distinct adapted rotations');
   assert(out.adapted.every(r => r.sequence[0] !== r.sequence[1] && r.sequence[1] !== r.sequence[2]), 'no consecutive monoculture');
+  const goals = GOAL_IDS.map(g => pickForGoal(out, g));
+  console.log('goals: ' + GOAL_IDS.map((g, i) => `${g}=${goals[i].label}${goals[i].alsoBestFor.length ? ' (also ' + goals[i].alsoBestFor.join('+') + ')' : ''}`).join(' | '));
+  assert(new Set(goals.map(r => r.id)).size >= 2, 'the 4 goals give at least 2 different suggestions');
+  assert(goals.every((r, i) => r.alsoBestFor.every(g => pickForGoal(out, g).id === r.id) &&
+    GOAL_IDS.filter((g, j) => j !== i && goals[j].id === r.id).length === r.alsoBestFor.length), 'goals sharing a rotation are reported as such');
 }
 // --- a crop that cannot grow (thermal fit 0) must not show a decent weather-fit score
 const scorching = getFallbackClimate(10.05, 105.75);

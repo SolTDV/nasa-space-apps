@@ -313,6 +313,44 @@ const SORTERS = {
     b.riskAdjustedProfit - a.riskAdjustedProfit || b.resilienceScore - a.resilienceScore || a.id.localeCompare(b.id),
 };
 
+export const BALANCED_STRATEGY = {
+  id: 'balanced',
+  title: 'All-Round Balanced Plan',
+  description: 'Best average rank across soil & pest health, water risk and risk-adjusted profit.',
+};
+
+// The candidate with the best average rank across the three strategy sorters
+// (ties: better resilience rank, then id).
+function pickBalanced(candidates) {
+  if (!candidates.length) return null;
+  const rankSum = new Map(candidates.map((r) => [r.id, 0]));
+  const resRank = new Map();
+  for (const strategy of STRATEGIES) {
+    [...candidates].sort(SORTERS[strategy.id]).forEach((r, i) => {
+      rankSum.set(r.id, rankSum.get(r.id) + i);
+      if (strategy.id === 'resilience') resRank.set(r.id, i);
+    });
+  }
+  const best = [...candidates].sort(
+    (a, b) => rankSum.get(a.id) - rankSum.get(b.id) || resRank.get(a.id) - resRank.get(b.id) || a.id.localeCompare(b.id)
+  )[0];
+  return { ...best, strategy: BALANCED_STRATEGY, avgRank: Math.round((rankSum.get(best.id) / STRATEGIES.length) * 10) / 10 };
+}
+
+export const GOAL_IDS = ['balanced', 'resilience', 'water', 'profit'];
+
+/**
+ * The suggested rotation for one goal ('balanced' | 'resilience' | 'water' | 'profit'),
+ * plus `alsoBestFor`: the other goals whose suggestion is the exact same rotation.
+ */
+export function pickForGoal(result, goalId) {
+  const plans = { balanced: result.balanced, ...Object.fromEntries(result.adapted.map((r) => [r.strategy.id, r])) };
+  const pick = plans[goalId] ?? plans.balanced ?? result.adapted[0];
+  if (!pick) return null;
+  const alsoBestFor = GOAL_IDS.filter((id) => id !== goalId && plans[id]?.id === pick.id);
+  return { ...pick, alsoBestFor };
+}
+
 export function generateRotations(crops, climate, options = {}) {
   const ctx = buildContext(crops, climate, options);
   const normalizeId = (id) => (id === 'rice' ? 'rice_paddy' : id);
@@ -407,9 +445,16 @@ export function generateRotations(crops, climate, options = {}) {
     adapted.push(result);
   }
 
+  const balanced = pickBalanced(candidates);
+  if (balanced) {
+    balanced.checklist = buildFieldChecklist(balanced, ctx);
+    balanced.vsBaseline = compareToBaseline(balanced, baseline);
+  }
+
   return {
     baseline,
     adapted,
+    balanced,
     meta: {
       candidatesEvaluated: candidates.length,
       poolIds: pool.map((c) => c.id),

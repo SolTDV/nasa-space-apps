@@ -12,7 +12,7 @@ import {
   Sparkles,
   Sprout,
 } from 'lucide-react';
-import { generateRotations, rankByPriorities } from '../utils/rotationEngine.js';
+import { generateRotations, pickForGoal } from '../utils/rotationEngine.js';
 import CropSearchInput from './CropSearchInput.jsx';
 
 const PRIORITY_OPTIONS = [
@@ -23,7 +23,7 @@ const PRIORITY_OPTIONS = [
     icon: Scale,
     activeCls: 'border-slate-900 bg-slate-900 text-white shadow-xs',
     iconCls: 'text-slate-300',
-    weights: { resilience: 34, water: 33, profit: 33 },
+    goalPhrase: 'an all-round balance',
   },
   {
     id: 'resilience',
@@ -32,7 +32,7 @@ const PRIORITY_OPTIONS = [
     icon: ShieldCheck,
     activeCls: 'border-emerald-600 bg-emerald-600 text-white shadow-xs',
     iconCls: 'text-emerald-100',
-    weights: { resilience: 60, water: 20, profit: 20 },
+    goalPhrase: 'breaking pests and building soil',
   },
   {
     id: 'water',
@@ -41,7 +41,7 @@ const PRIORITY_OPTIONS = [
     icon: Droplets,
     activeCls: 'border-sky-600 bg-sky-600 text-white shadow-xs',
     iconCls: 'text-sky-100',
-    weights: { resilience: 20, water: 60, profit: 20 },
+    goalPhrase: 'saving water',
   },
   {
     id: 'profit',
@@ -50,9 +50,17 @@ const PRIORITY_OPTIONS = [
     icon: Sprout,
     activeCls: 'border-amber-600 bg-amber-600 text-white shadow-xs',
     iconCls: 'text-amber-100',
-    weights: { resilience: 20, water: 20, profit: 60 },
+    goalPhrase: 'higher profit with less fertilizer',
   },
 ];
+
+const GOAL_PHRASE = Object.fromEntries(PRIORITY_OPTIONS.map((o) => [o.id, o.goalPhrase]));
+
+// "saving water" / "saving water and breaking pests and building soil"
+const joinGoals = (ids) => {
+  const phrases = ids.map((id) => GOAL_PHRASE[id]);
+  return phrases.length <= 1 ? phrases.join('') : `${phrases.slice(0, -1).join(', ')} and ${phrases[phrases.length - 1]}`;
+};
 
 const usd = (v) => `${v < 0 ? '-' : ''}$${Math.abs(Math.round(v)).toLocaleString('en-US')}`;
 
@@ -138,12 +146,8 @@ export default function RotationTab({
     [crops, climate, baselineSequence, rotationLength, waterSupply, elevationM, overrides]
   );
 
-  const ranked = useMemo(
-    () => rankByPriorities(result.adapted, activePriority.weights),
-    [result.adapted, activePriority]
-  );
-
-  const candidate = ranked[0];
+  // Each goal maps to one engine strategy; "All-Round Balance" = best average rank across the three
+  const candidate = useMemo(() => pickForGoal(result, activePriority.id), [result, activePriority]);
   const baseline = result.baseline;
 
   if (!candidate) return null;
@@ -167,9 +171,25 @@ export default function RotationTab({
   const totalCandFert = candidate.fertilizerSaved * farmSizeHa;
   const totalFertDelta = d.fertilizerSaved * farmSizeHa;
 
-  // Plain-English takeaways explaining why the recommended rotation helps
-  const plainReasons = useMemo(() => {
+  // Plain-English takeaways: first why this plan fits the selected goal, then what it does for the field
+  const plainReasons = (() => {
     const reasons = [];
+    const profitPct = d.profitDeltaPct;
+    const profitText =
+      profitPct === null || profitPct === undefined ? '' : ` (${profitPct > 0 ? '+' : ''}${profitPct}% profit vs. now)`;
+    if (activePriority.id === 'resilience') {
+      reasons.push(`Picked for the best Soil & Pest Health score: ${candidate.resilienceScore}/100, compared with ${baseline.resilienceScore}/100 for your current plan.`);
+    } else if (activePriority.id === 'water') {
+      reasons.push(`Picked for low drought & water risk: ${candidate.waterRisk}/100, compared with ${baseline.waterRisk}/100 now (lower is safer).`);
+    } else if (activePriority.id === 'profit') {
+      reasons.push(
+        candidate.hasLegume
+          ? `Picked for the best profit after price risk among plans with a legume${profitText}, while the legume cuts fertilizer.`
+          : `Picked for the best profit after price risk${profitText}.`
+      );
+    } else {
+      reasons.push('Picked as the best all-round plan: it ranks well on soil health, water risk and profit at the same time.');
+    }
     const seqCrops = candidate.sequence.map((id) => cropById[id]).filter(Boolean);
     const families = new Set(seqCrops.map((c) => c.botanicalFamily));
     if (families.size === rotationLength) {
@@ -188,7 +208,10 @@ export default function RotationTab({
       reasons.push('Matches your local temperature and rainfall window while diversifying harvest income.');
     }
     return reasons;
-  }, [candidate, cropById, rotationLength, d.waterRiskDeltaPts]);
+  })();
+
+  const goalCardCls = (goalId) =>
+    activePriority.id === goalId ? 'border-emerald-500 ring-2 ring-emerald-500/30' : 'border-slate-200';
 
   return (
     <div className="space-y-6">
@@ -314,7 +337,12 @@ export default function RotationTab({
             </span>
           </div>
           <h3 className="text-lg font-bold text-slate-900">{candidate.strategy.title}</h3>
-          <p className="mb-4 text-xs text-slate-500">{candidate.strategy.description}</p>
+          <p className={`${candidate.alsoBestFor.length ? 'mb-2' : 'mb-4'} text-xs text-slate-500`}>{candidate.strategy.description}</p>
+          {candidate.alsoBestFor.length > 0 && (
+            <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+              This is also the best plan for {joinGoals(candidate.alsoBestFor)}.
+            </p>
+          )}
 
           <div className="space-y-2.5">
             {candidate.sequence.map((id, i) => (
@@ -353,7 +381,7 @@ export default function RotationTab({
 
       {/* 4 Simple Outcome Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className={`rounded-2xl border bg-white p-4 shadow-xs ${goalCardCls('resilience')}`}>
           <div className="text-xs font-semibold text-slate-500">Soil &amp; Pest Health Score</div>
           <div className="mt-2 flex items-baseline justify-between gap-2">
             <div>
@@ -367,7 +395,7 @@ export default function RotationTab({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className={`rounded-2xl border bg-white p-4 shadow-xs ${goalCardCls('water')}`}>
           <div className="text-xs font-semibold text-slate-500">Drought &amp; Water Risk</div>
           <div className="mt-2 flex items-baseline justify-between gap-2">
             <div>
@@ -381,7 +409,7 @@ export default function RotationTab({
           </div>
         </div>
 
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className={`flex flex-col justify-between rounded-2xl border bg-white p-4 shadow-xs ${goalCardCls('profit')}`}>
           <div>
             <div className="text-xs font-semibold text-slate-500">
               {hasCustomEconomics ? `Estimated Profit (${farmSizeHa} ha)` : 'Expected Profit Change'}
@@ -422,7 +450,7 @@ export default function RotationTab({
           </div>
         </div>
 
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className={`flex flex-col justify-between rounded-2xl border bg-white p-4 shadow-xs ${goalCardCls('profit')}`}>
           <div>
             <div className="text-xs font-semibold text-slate-500">
               {hasCustomEconomics ? `Fertilizer Saved (${farmSizeHa} ha)` : 'Fertilizer Bill Reduction'}

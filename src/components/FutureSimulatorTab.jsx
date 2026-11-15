@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { scoreAllCrops } from '../utils/cropScorer.js';
-import { generateRotations, rankByPriorities } from '../utils/rotationEngine.js';
+import { generateRotations } from '../utils/rotationEngine.js';
 import { MONTH_NAMES } from '../utils/nasaApi.js';
 import { assessWaterRisk, isUsable, simulateSoil, trainSoilModel } from '../utils/soilMoistureModel.js';
 import WaterRiskCard from './WaterRiskCard.jsx';
@@ -181,8 +181,8 @@ export default function FutureSimulatorTab({
       elevationM,
       overrides,
     });
-    const best = rankByPriorities(res.adapted, { resilience: 34, water: 33, profit: 33 })[0];
-    return { baseline: res.baseline, recommended: best };
+    // Same pick as the Rotation tab's default "All-Round Balance" goal
+    return { baseline: res.baseline, recommended: res.balanced ?? res.adapted[0] };
   }, [crops, simClimate, baselineSequence, rotationLength, waterSupply, elevationM, overrides]);
 
   const cropNameById = useMemo(
