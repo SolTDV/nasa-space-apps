@@ -30,7 +30,7 @@ NASA POWER monthly history (2006–2025):
 - **Learns:** root-zone wetness anomaly (GWETROOT) from rain anomalies this month and the two months before
   (soil memory) plus the temperature anomaly. Anomalies are departures from each calendar month's average.
 - **Checked:** leave-one-year-out. Share of year-to-year moisture swings explained on unseen years, real NASA data:
-  Can Tho 0.71, Ca Mau 0.61, Buon Ma Thuot 0.82, Iowa 0.49, Kansas 0.62.
+  Can Tho 0.71, Ca Mau 0.61, Buon Ma Thuot 0.82, Iowa 0.48, Kansas 0.62.
   Above 0.3 the verdict is shown, 0.1–0.3 it is labelled "Rough estimate", below 0.1 it is hidden.
 - **Physical limits:** more rain may never dry the soil and warming may never wet it (coefficients are clipped).
 - **Dry month:** predicted wetness below that month's driest-20% level, at least 3 points below today, and under 0.7.

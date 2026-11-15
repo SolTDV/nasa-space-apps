@@ -37,7 +37,7 @@ Pin your field ──► NASA POWER (monthly, 2006–2025) + elevation
 
 | Source | What we use | What it is for |
 |---|---|---|
-| NASA POWER `T2M`, `T2M_MAX`, `T2M_MIN` | Monthly air temperature | Crop temperature fit, heat-stress months |
+| NASA POWER `T2M`, `T2M_RANGE` | Monthly mean air temperature and typical daily range (typical daily high/low = mean ± range/2) | Crop temperature fit, heat-stress months |
 | NASA POWER `PRECTOTCORR` | Monthly rainfall | Rain fit, dryland and waterlogging rules |
 | NASA POWER `GWETROOT` | Root-zone soil wetness | Moisture fit, soil water outlook |
 | NASA POWER `ALLSKY_SFC_SW_DWN` | Sunlight reaching the ground (MJ/m²/day) | Light fit for crops |
@@ -50,23 +50,39 @@ Pin your field ──► NASA POWER (monthly, 2006–2025) + elevation
 
 ### Set up your farm (top of every screen)
 - **Three demo farms** for a one-click start: Mekong Delta rice, Iowa corn monoculture, Kansas dryland wheat.
-- **Drop a pin anywhere** on the map. The app suggests paddy rice in the tropics and maize elsewhere as a
-  starting crop.
+- **Drop a pin anywhere** on the map. If your current plan is one crop repeated, the app switches it to paddy
+  rice in the tropics and maize elsewhere as a starting crop.
 - **Water and size:** rainfed or irrigated, farm area in hectares. Elevation is filled in automatically.
 - **Safety nets:** a pin over water asks you to move it; a slow connection shows clearly labelled typical weather.
 - **3-step guide** at the top explains what to do, and can be hidden.
 
 ### 1. Rotation Plan
-- Choose **2, 3 or 4 seasons** and **one goal**: All-Round Balance, Break Pests & Build Soil, Save Water & Beat
-  Drought, or Higher Profit & Less Fertilizer.
+- Choose **2, 3 or 4 seasons** and **one goal**. Each goal picks its own rotation:
+  - **Break Pests & Build Soil:** the highest Soil & Pest Health score.
+  - **Save Water & Beat Drought:** the lowest Drought & Water Risk.
+  - **Higher Profit & Less Fertilizer:** the highest risk-adjusted profit (price volatility, a penalty for more
+    than one perishable crop, a bonus for a legume), preferring rotations that include a legume.
+  - **All-Round Balance:** the rotation with the best average rank across those three rankings.
+  - The three single-goal plans always use different crop sets. When two goals land on the same rotation, the
+    card says so ("This is also the best plan for saving water").
 - Enter **what you grow now**, season by season, with a searchable crop picker. Each season shows its weather fit.
-- Get a **suggested rotation** that is always different from, and better than, your current plan, with plain
-  reasons ("includes a nitrogen-fixing legume", "mixes shallow and deep roots").
-- **Before and after cards:** Soil & Pest Health, Drought & Water Risk, Estimated Profit, Fertilizer Saved.
+- Get a **suggested rotation** with plain reasons: first why it fits the chosen goal, then what it does for the
+  field ("includes a nitrogen-fixing legume", "mixes shallow and deep roots"). The engine tries every crop order
+  from the crops that grow here (weather fit 35% or more, no repeat of the same crop or plant family back to
+  back), keeps at least one of your current crops when you grow a storable one, allows at most one perishable
+  crop, and drops plans that are worse than yours on both soil health and water risk. A goal can still trade
+  one score for another (for example more profit but higher water risk).
+- **Before and after cards:** Soil & Pest Health, Drought & Water Risk, Estimated Profit, Fertilizer Saved. The
+  card that matches the chosen goal is highlighted. Profit and fertilizer are totals for the whole rotation and
+  the farm area; on irrigated farms the profit card also shows the estimated irrigation cost.
+- **Scores:** Soil & Pest Health = 60% agronomic rule score + 40% average weather fit. Drought & Water Risk =
+  50% crop water need + 35% rain shortfall + 15% if, on dryland, a high-water crop is followed by one that is not
+  low-water.
 - **Agronomic rules behind the score:** nitrogen synergy (a legume before a heavy feeder earns a 15% fertilizer
   credit), pest and disease break across plant families, soil structure from root depth and residue, weed
-  suppression, soil-moisture carryover (stricter below 550 mm of rain a year, waterlogging checks above
-  1,100 mm), and farm soil and terrain modifiers.
+  suppression (cool and warm season crops mixed), and soil-moisture carryover on dryland (below 550 mm of rain
+  a year). The engine also has clay-waterlogging (above 1,100 mm) and sloping-land modifiers, but the app has
+  no soil-texture or slope input yet, so they are not used.
 - **Before You Plant checklist:** what NASA data cannot see (soil pH, texture, pest history, seed and labour
   availability), so the farmer checks it on the ground.
 - **Technical comparison** of pests, nitrogen, roots and weeds for anyone who wants the detail.
@@ -81,12 +97,17 @@ Pin your field ──► NASA POWER (monthly, 2006–2025) + elevation
 - Start from FAOSTAT yields and prices, then **adjust to the local market**: selling price (−40% to +50%),
   seed and fertilizer costs (−40% to +50%), and **distance to the buyer** (under 20 km, 20–100 km, over 100 km),
   which raises spoilage risk for fresh produce.
+- **Irrigated farms** get up to 12% more attainable yield and softer rain and moisture limits, but pay an
+  **estimated irrigation cost** per hectare per season by crop water need: 45 $ (low), 95 $ (medium) or 160 $
+  (high). These values are an assumption, not from a published source; a slider (0–300%) lets the farmer change
+  them to their own cost. Each table row shows the irrigation part of its input costs.
 - A table of **estimated yield, sales, input costs and net profit per hectare**, sorted from best to worst,
   with your current crop marked.
 
 ### 4. Weather Trends
 - **Recent 5 years (2021–2025) against the 20-year baseline (2006–2025)** for this exact location: shift in
-  mean temperature, rainfall (%), root-zone wetness, and the number of heat-stress months (above 34 °C).
+  mean temperature, rainfall (%), root-zone wetness, and the number of heat-stress months (months whose typical
+  daily high is above 34 °C).
 - Month-by-month charts for temperature, rainfall, soil moisture and sunlight, to see *when* the change happens.
 
 ### 5. Future Simulator
@@ -94,31 +115,35 @@ Pin your field ──► NASA POWER (monthly, 2006–2025) + elevation
   (+3.2 °C, −15%), and a **local trend projection** extended from this field's own 20-year change. The first three
   are illustrative shifts in the range of IPCC scenarios, not downscaled model output.
 - **Sliders** for temperature (0 to +4.5 °C) and annual rainfall (−35% to +25%).
-- **Crops losing weather fit**, **climate-resilient picks**, and a **future-proof rotation** side by side with
-  the current plan in the same future weather.
+- **Crops losing weather fit**, **best crops for future conditions**, and a **future rotation** (the
+  All-Round Balance pick) side by side with the current plan in the same future weather.
 - **Soil Water Outlook:** one plain verdict ("No extra water risk", "Watch out in Feb–Mar", "Water shortage
   risk"), a 12-month strip showing which months turn dry, and one or two actions naming the farmer's own crops
-  ("switch to mung bean", "store water before February", "plan extra irrigation in March").
+  ("Consider Mung Bean instead, or store water before Nov.", "Plan extra irrigation for Maize in Mar", or
+  "Your current crops avoid Feb–Mar. Keep that gap when you plan new seasons.").
   - Behind it, a small model is trained in the browser on the field's own NASA history: root-zone wetness
     explained by this month's rain, the two previous months' rain (soil memory) and temperature.
   - Each year is checked by a model that never saw it. On real NASA POWER data the model explains 71% of
-    year-to-year soil-moisture swings in Can Tho, 61% in Ca Mau, 82% in Buon Ma Thuot and 49% in Iowa.
-  - Farmers never see these numbers. Where the model is weak the card says "Rough estimate" or stays hidden;
-    scenarios beyond any year on record are marked as a rough guide.
+    year-to-year soil-moisture swings in Can Tho, 61% in Ca Mau, 82% in Buon Ma Thuot, 48% in Iowa and 62% in
+    Kansas.
+  - Farmers never see these numbers. Below 30% the card says "Rough estimate", below 10% (or without live NASA
+    data) it stays hidden; scenarios beyond any year on record are marked as a rough guide.
 
 ---
 
 ## How it is used
 
-**A rice farmer in Ca Mau (Mekong Delta).** She keeps the default plan, rice every season, and opens the Future
-Simulator. Under the moderate 2040 scenario, the Soil Water Outlook on real NASA data reads *"Watch out in
-Feb–Mar"*: the dry-season months her second crop depends on. The Rotation Plan suggests putting a short,
-low-water legume such as mung bean into that slot, and the Profit tab shows what it earns at her local price.
-Decision: change one season, store water before February, and check salinity before taking canal water.
+**A rice farmer in Ca Mau (Mekong Delta).** She keeps the default plan, paddy rice every season, and opens the
+Future Simulator. Under the moderate 2040 scenario, the Soil Water Outlook on real NASA data reads *"Watch out in
+Feb–Mar"*: soil would be drier than in most years in those months. Her rice seasons avoid Feb–Mar, so the advice
+is to keep that gap when she plans new seasons. The Rotation Plan then shows what a rotation would change (for
+example Chickpea → Paddy Rice → Cassava for "Save Water & Beat Drought"), and the Profit tab shows what each crop
+earns at her local price.
 
 **A corn grower in Iowa.** Continuous corn scores poorly on Soil & Pest Health. With the "Higher Profit & Less
 Fertilizer" goal the suggested rotation brings in a legume. The Fertilizer Saved card shows the nitrogen saving,
-and the checklist reminds him to soil-test nitrogen and use the right rhizobia inoculant before cutting fertilizer.
+and the checklist reminds the grower to soil-test nitrogen and use the right rhizobia inoculant before cutting
+fertilizer.
 
 **A dryland wheat farmer in Kansas.** The app recognises a dryland regime (under 550 mm of rain a year). The
 "Save Water & Beat Drought" goal favours crops that leave moisture in the soil for the next season, and the
@@ -143,6 +168,6 @@ on Earth.
 
 ## Under the hood
 
-React 18 + Vite + Tailwind, Recharts for charts, Leaflet for the map, all client-side. Tests run without a
+React 18 + Vite + Tailwind, hand-drawn SVG charts, Leaflet for the map, all client-side. Tests run without a
 framework: `node scripts/smoke.mjs` (parser, fallback, scorer, rotation engine) and `node scripts/soil.mjs`
 (soil water model).
