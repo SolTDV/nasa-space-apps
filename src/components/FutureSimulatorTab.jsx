@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { scoreAllCrops } from '../utils/cropScorer.js';
 import { generateRotations, rankByPriorities } from '../utils/rotationEngine.js';
+import { MONTH_NAMES } from '../utils/nasaApi.js';
+import { assessWaterRisk, isUsable, simulateSoil, trainSoilModel } from '../utils/soilMoistureModel.js';
+import WaterRiskCard from './WaterRiskCard.jsx';
 
 const SCENARIOS = [
   {
@@ -51,21 +54,29 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 /**
  * Perturbs the site's NASA POWER climate object to simulate future temperature,
  * rainfall, and root-zone soil moisture conditions.
+ * When a soil model trained on this field's NASA history is available, root-zone moisture
+ * comes from it; otherwise a simple rule of thumb is used.
  */
-function buildSimulatedClimate(climate, tempDeltaC, rainDeltaPct) {
+function buildSimulatedClimate(climate, tempDeltaC, rainDeltaPct, soilModel = null) {
   const base = climate.recent5Yr;
   const rainFactor = Math.max(0.2, 1 + rainDeltaPct / 100);
-  // Warmer air increases evapotranspiration, slightly drying root-zone moisture even at constant rain
+  // Rule of thumb: warmer air increases evapotranspiration, slightly drying root-zone moisture even at constant rain
   const evapMoistureFactor = clamp(1 + rainDeltaPct / 140 - tempDeltaC * 0.025, 0.25, 1.35);
+  const learnedGwet = soilModel ? simulateSoil(soilModel, base.monthly, tempDeltaC, rainDeltaPct) : null;
 
-  const simMonthly = base.monthly.map((m) => ({
+  const simMonthly = base.monthly.map((m, i) => ({
     ...m,
     temp: Math.round((m.temp + tempDeltaC) * 10) / 10,
     minTemp: Math.round((m.minTemp + tempDeltaC * 0.95) * 10) / 10,
     maxTemp: Math.round((m.maxTemp + tempDeltaC * 1.1) * 10) / 10,
     rainMm: Math.round(m.rainMm * rainFactor * 10) / 10,
-    gwetRoot: Math.round(clamp(m.gwetRoot * evapMoistureFactor, 0.05, 1.0) * 100) / 100,
+    gwetRoot: learnedGwet
+      ? Math.round(learnedGwet[i] * 100) / 100
+      : Math.round(clamp(m.gwetRoot * evapMoistureFactor, 0.05, 1.0) * 100) / 100,
   }));
+  const avgGwet = learnedGwet
+    ? learnedGwet.reduce((s, v) => s + v, 0) / learnedGwet.length
+    : clamp(base.avgGwetRoot * evapMoistureFactor, 0.05, 1.0);
 
   return {
     ...climate,
@@ -73,7 +84,7 @@ function buildSimulatedClimate(climate, tempDeltaC, rainDeltaPct) {
       ...base,
       avgTempC: Math.round((base.avgTempC + tempDeltaC) * 10) / 10,
       annualRainMm: Math.round(base.annualRainMm * rainFactor),
-      avgGwetRoot: Math.round(clamp(base.avgGwetRoot * evapMoistureFactor, 0.05, 1.0) * 100) / 100,
+      avgGwetRoot: Math.round(avgGwet * 100) / 100,
       monthly: simMonthly,
     },
   };
@@ -113,9 +124,16 @@ export default function FutureSimulatorTab({
     }
   };
 
+  // Hidden soil-moisture model trained on this field's NASA POWER history (null if data are too thin)
+  const soilModel = useMemo(() => {
+    if (!climate || climate.isFallback) return null;
+    const model = trainSoilModel(climate.monthlySeries);
+    return isUsable(model) ? model : null;
+  }, [climate]);
+
   const simClimate = useMemo(
-    () => buildSimulatedClimate(climate, customTemp, customRain),
-    [climate, customTemp, customRain]
+    () => buildSimulatedClimate(climate, customTemp, customRain, soilModel),
+    [climate, customTemp, customRain, soilModel]
   );
 
   // Score crops today vs under future simulated climate
@@ -171,6 +189,30 @@ export default function FutureSimulatorTab({
     () => Object.fromEntries(crops.map((c) => [c.id, c.name.split(' (')[0]])),
     [crops]
   );
+
+  // One plain verdict: will the soil be short of water, when, and what to do about it
+  const waterRisk = useMemo(() => {
+    if (!soilModel) return null;
+    const baseMonthly = climate.recent5Yr.monthly;
+    const growing = Object.fromEntries(futureRanked.map(({ crop, score }) => [crop.id, score.growingMonths ?? []]));
+    const plan = baselineSequence.map((id) => ({
+      name: cropNameById[id] ?? id,
+      months: (growing[id] ?? []).map((m) => MONTH_NAMES.indexOf(m)).filter((i) => i >= 0),
+    }));
+    const lowWaterAlternatives = futureRanked
+      .filter(({ crop, score }) => crop.waterUse === 'low' && score.envScore >= 60 && !baselineSequence.includes(crop.id))
+      .map(({ crop }) => cropNameById[crop.id]);
+    return assessWaterRisk({
+      model: soilModel,
+      baseMonthly,
+      simGwet: simulateSoil(soilModel, baseMonthly, customTemp, customRain),
+      tempDeltaC: customTemp,
+      rainDeltaPct: customRain,
+      plan,
+      lowWaterAlternatives,
+      waterSupply,
+    });
+  }, [soilModel, climate, futureRanked, baselineSequence, cropNameById, customTemp, customRain, waterSupply]);
 
   const futureHeatMonths = useMemo(
     () => simClimate.recent5Yr.monthly.filter((m) => m.maxTemp > 34).length,
@@ -292,6 +334,8 @@ export default function FutureSimulatorTab({
             </div>
           </div>
         </div>
+
+        {waterRisk && <WaterRiskCard risk={waterRisk} />}
       </section>
 
       {/* Step 2: Crops at Risk vs. Best Future Replacements */}
