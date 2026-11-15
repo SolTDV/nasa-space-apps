@@ -2,6 +2,7 @@
 // rules, penalizes stacked perishable market risk, and ensures recommendations improve on baseline.
 
 import { scoreCrop, computeCropEconomics } from './cropScorer.js';
+import { shortCropName } from './cropNames.js';
 
 export const DRYLAND_RAIN_MM = 550;
 export const WATERLOGGING_RAIN_MM = 1100;
@@ -16,7 +17,7 @@ const RAW_SPAN = 180;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const mean = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
-const shortName = (crop) => crop.name.split(' (')[0];
+const shortName = shortCropName;
 const badge = (id, label, tone) => ({ id, label, tone });
 
 export const STRATEGIES = [
@@ -43,12 +44,13 @@ export function buildContext(crops, climate, options = {}) {
   return {
     crops,
     cropMap: Object.fromEntries(crops.map((c) => [c.id, c])),
-    scores: Object.fromEntries(crops.map((c) => [c.id, scoreCrop(c, climate)])),
+    scores: Object.fromEntries(crops.map((c) => [c.id, scoreCrop(c, climate, { waterSupply: options.waterSupply })])),
     annualRainMm: climate?.recent5Yr?.annualRainMm ?? 0,
     soilTexture: options.soilTexture ?? 'Unknown',
     soilPh: options.soilPh ?? 'Unknown',
     slopingLand: Boolean(options.slopingLand),
     overrides: options.overrides ?? {},
+    waterSupply: options.waterSupply ?? 'rainfed',
   };
 }
 
@@ -168,7 +170,7 @@ export function evaluateRotation(cropIds, ctx) {
     cropId: crop.id,
     cropName: crop.name,
     envScore: scores[i].envScore,
-    ...computeCropEconomics(crop, scores[i], { ...ctx.overrides, inputDiscountPct: discounts[i] }),
+    ...computeCropEconomics(crop, scores[i], { ...ctx.overrides, waterSupply: ctx.waterSupply, inputDiscountPct: discounts[i] }),
   }));
 
   const ruleScore = clamp(Math.round(((raw + 70) / RAW_SPAN) * 100), 0, 100);
@@ -312,6 +314,44 @@ const SORTERS = {
     b.riskAdjustedProfit - a.riskAdjustedProfit || b.resilienceScore - a.resilienceScore || a.id.localeCompare(b.id),
 };
 
+export const BALANCED_STRATEGY = {
+  id: 'balanced',
+  title: 'All-Round Balanced Plan',
+  description: 'Best average rank across soil & pest health, water risk and risk-adjusted profit.',
+};
+
+// The candidate with the best average rank across the three strategy sorters
+// (ties: better resilience rank, then id).
+function pickBalanced(candidates) {
+  if (!candidates.length) return null;
+  const rankSum = new Map(candidates.map((r) => [r.id, 0]));
+  const resRank = new Map();
+  for (const strategy of STRATEGIES) {
+    [...candidates].sort(SORTERS[strategy.id]).forEach((r, i) => {
+      rankSum.set(r.id, rankSum.get(r.id) + i);
+      if (strategy.id === 'resilience') resRank.set(r.id, i);
+    });
+  }
+  const best = [...candidates].sort(
+    (a, b) => rankSum.get(a.id) - rankSum.get(b.id) || resRank.get(a.id) - resRank.get(b.id) || a.id.localeCompare(b.id)
+  )[0];
+  return { ...best, strategy: BALANCED_STRATEGY, avgRank: Math.round((rankSum.get(best.id) / STRATEGIES.length) * 10) / 10 };
+}
+
+export const GOAL_IDS = ['balanced', 'resilience', 'water', 'profit'];
+
+/**
+ * The suggested rotation for one goal ('balanced' | 'resilience' | 'water' | 'profit'),
+ * plus `alsoBestFor`: the other goals whose suggestion is the exact same rotation.
+ */
+export function pickForGoal(result, goalId) {
+  const plans = { balanced: result.balanced, ...Object.fromEntries(result.adapted.map((r) => [r.strategy.id, r])) };
+  const pick = plans[goalId] ?? plans.balanced ?? result.adapted[0];
+  if (!pick) return null;
+  const alsoBestFor = GOAL_IDS.filter((id) => id !== goalId && plans[id]?.id === pick.id);
+  return { ...pick, alsoBestFor };
+}
+
 export function generateRotations(crops, climate, options = {}) {
   const ctx = buildContext(crops, climate, options);
   const normalizeId = (id) => (id === 'rice' ? 'rice_paddy' : id);
@@ -406,9 +446,16 @@ export function generateRotations(crops, climate, options = {}) {
     adapted.push(result);
   }
 
+  const balanced = pickBalanced(candidates);
+  if (balanced) {
+    balanced.checklist = buildFieldChecklist(balanced, ctx);
+    balanced.vsBaseline = compareToBaseline(balanced, baseline);
+  }
+
   return {
     baseline,
     adapted,
+    balanced,
     meta: {
       candidatesEvaluated: candidates.length,
       poolIds: pool.map((c) => c.id),

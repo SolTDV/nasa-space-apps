@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Calendar, CheckCircle2, ChevronDown, ChevronUp, Search, Sprout } from 'lucide-react';
+import { shortCropName } from '../utils/cropNames.js';
 
 const FIT_BADGE = (score) => {
   if (score >= 80) return { label: 'Great Match', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', bar: 'bg-emerald-500' };
@@ -18,7 +19,7 @@ export default function CropFitTab({ scored = [] }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return scored.filter(({ crop, score }) => {
-      if (q && !crop.name.toLowerCase().includes(q) && !crop.botanicalFamily?.toLowerCase().includes(q)) {
+      if (q && !crop.name.toLowerCase().includes(q) && !shortCropName(crop).toLowerCase().includes(q) && !crop.botanicalFamily?.toLowerCase().includes(q)) {
         return false;
       }
       if (filter === 'strong' && score.envScore < 75) return false;
@@ -54,7 +55,7 @@ export default function CropFitTab({ scored = [] }) {
                   {score.envScore}% Match
                 </span>
               </div>
-              <div className="mt-2 text-base font-bold text-slate-900">{crop.name.split(' (')[0]}</div>
+              <div className="mt-2 text-base font-bold text-slate-900">{shortCropName(crop)}</div>
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-600">
                 <Calendar className="h-3.5 w-3.5 text-emerald-600" />
                 Best window: <strong>{score.growingMonths[0]}–{score.growingMonths[score.growingMonths.length - 1]}</strong>
@@ -115,7 +116,7 @@ export default function CropFitTab({ scored = [] }) {
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">{crop.name.split(' (')[0]}</h3>
+                      <h3 className="text-sm font-bold text-slate-900">{shortCropName(crop)}</h3>
                       <span className="text-[11px] text-slate-500">
                         {crop.seasonType === 'warm' ? 'Warm-season' : 'Cool-season'} · {crop.waterUse} water need
                       </span>

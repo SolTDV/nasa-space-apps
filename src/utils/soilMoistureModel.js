@@ -9,7 +9,7 @@
 //
 // How it is checked: leave-one-year-out. Each year is predicted by a model that never saw it.
 // On real NASA POWER data (2006-2025) this explains about 50-80% of year-to-year soil-moisture
-// swings (Can Tho 0.71, Ca Mau 0.61, Buon Ma Thuot 0.82, Iowa 0.49).
+// swings (Can Tho 0.71, Ca Mau 0.61, Buon Ma Thuot 0.82, Iowa 0.48, Kansas 0.62).
 // Farmers never see the score. It only decides whether the verdict is shown normally,
 // labelled "rough estimate", or hidden.
 

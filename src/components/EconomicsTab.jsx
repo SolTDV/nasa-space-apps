@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Coins, RotateCcw, Search, Truck } from 'lucide-react';
-import { DISTANCE_OPTIONS, computeCropEconomics } from '../utils/cropScorer.js';
+import { Coins, Droplets, RotateCcw, Search, Truck } from 'lucide-react';
+import { DISTANCE_OPTIONS, IRRIGATION_COST_HA, IRRIGATION_COST_NOTE, computeCropEconomics } from '../utils/cropScorer.js';
+import { shortCropName } from '../utils/cropNames.js';
 
 export const DEFAULT_OVERRIDES = {
   priceMultiplierPct: 100,
   costMultiplierPct: 100,
   distanceToMarket: 'under20',
   inputDiscountPct: 0,
+  irrigationCostPct: 100,
 };
 
 const usd = (v) => `${v < 0 ? '-' : ''}$${Math.abs(Math.round(v)).toLocaleString('en-US')}`;
@@ -19,12 +21,16 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
   const isCustomized =
     overrides.priceMultiplierPct !== 100 ||
     overrides.costMultiplierPct !== 100 ||
+    (overrides.irrigationCostPct ?? 100) !== 100 ||
     overrides.distanceToMarket !== 'under20';
+  const isIrrigated = overrides.waterSupply === 'irrigated';
+  const irrigationPct = overrides.irrigationCostPct ?? 100;
+  const irrigationUsd = (level) => usd((IRRIGATION_COST_HA[level] * irrigationPct) / 100);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return scored
-      .filter(({ crop }) => !q || crop.name.toLowerCase().includes(q))
+      .filter(({ crop }) => !q || crop.name.toLowerCase().includes(q) || shortCropName(crop).toLowerCase().includes(q))
       .map(({ crop, score }) => ({
         crop,
         score,
@@ -135,6 +141,34 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
             </p>
           </div>
         </div>
+
+        {isIrrigated && (
+          <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50/60 p-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+              <span className="flex items-center gap-1.5">
+                <Droplets className="h-3.5 w-3.5 text-sky-600" /> Estimated irrigation cost
+              </span>
+              <span className="rounded bg-white px-2 py-0.5 font-mono text-sky-700 ring-1 ring-slate-200">
+                {irrigationPct}%
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-600">{IRRIGATION_COST_NOTE}</p>
+            <input
+              type="range"
+              min={0}
+              max={300}
+              step={10}
+              value={irrigationPct}
+              aria-label="Estimated irrigation cost"
+              onChange={(e) => update({ irrigationCostPct: Number(e.target.value) })}
+              className="mt-3 w-full accent-sky-600"
+            />
+            <div className="mt-1 text-[11px] text-slate-500">
+              Per hectare per season: low-water crops {irrigationUsd('low')} · medium {irrigationUsd('medium')} · high{' '}
+              {irrigationUsd('high')}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Step 2: Clean Profit Comparison Table */}
@@ -144,6 +178,7 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
             <h2 className="text-base font-bold text-slate-900">Step 2: Estimated Profit per Hectare ($/ha)</h2>
             <p className="text-xs text-slate-500">
               Sorted from highest net profit to lowest based on your local weather fit and prices.
+              {isIrrigated && ' Input costs include the estimated irrigation cost (see the slider above).'}
             </p>
           </div>
 
@@ -180,7 +215,7 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{crop.name.split(' (')[0]}</span>
+                        <span className="font-bold text-slate-900">{shortCropName(crop)}</span>
                         {isCurrent && (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                             Your Crop
@@ -190,6 +225,11 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
                       <div className="mt-0.5 text-[11px] text-slate-500">
                         Weather fit: {score.envScore}% · {econ.perishabilityRisk !== 'None' ? `${econ.perishabilityRisk} transport spoilage risk` : 'Easy to store & transport'}
                       </div>
+                      {econ.yieldTha === 0 && (
+                        <div className="mt-0.5 text-[11px] font-semibold text-rose-600">
+                          Too hot or too cold to grow here: no harvest expected, only seed and input costs.
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-slate-700">
                       {econ.yieldTha} t/ha
@@ -199,6 +239,11 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-slate-500">
                       -{usd(econ.inputCostHa)}
+                      {econ.irrigationCostHa > 0 && (
+                        <div className="mt-0.5 font-sans text-[11px] text-sky-700">
+                          incl. {usd(econ.irrigationCostHa)} estimated irrigation cost
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono text-sm font-extrabold">
                       <span className={econ.netMarginHa >= 0 ? 'text-emerald-700' : 'text-rose-600'}>

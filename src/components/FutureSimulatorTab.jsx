@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -9,10 +9,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { scoreAllCrops } from '../utils/cropScorer.js';
-import { generateRotations, rankByPriorities } from '../utils/rotationEngine.js';
+import { generateRotations } from '../utils/rotationEngine.js';
 import { MONTH_NAMES } from '../utils/nasaApi.js';
 import { assessWaterRisk, isUsable, simulateSoil, trainSoilModel } from '../utils/soilMoistureModel.js';
 import WaterRiskCard from './WaterRiskCard.jsx';
+import { shortCropName } from '../utils/cropNames.js';
 
 const SCENARIOS = [
   {
@@ -113,6 +114,13 @@ export default function FutureSimulatorTab({
     };
   }, [climate]);
 
+  // Keep the sliders on the local trend when the farm location (and so the NASA trend) changes
+  useEffect(() => {
+    if (scenarioId !== 'local_trend') return;
+    setCustomTemp(extrapolated.tempDelta);
+    setCustomRain(extrapolated.rainPct);
+  }, [scenarioId, extrapolated.tempDelta, extrapolated.rainPct]);
+
   const handleSelectScenario = (sc) => {
     setScenarioId(sc.id);
     if (sc.id === 'local_trend') {
@@ -181,12 +189,12 @@ export default function FutureSimulatorTab({
       elevationM,
       overrides,
     });
-    const best = rankByPriorities(res.adapted, { resilience: 34, water: 33, profit: 33 })[0];
-    return { baseline: res.baseline, recommended: best };
+    // Same pick as the Rotation tab's default "All-Round Balance" goal
+    return { baseline: res.baseline, recommended: res.balanced ?? res.adapted[0] };
   }, [crops, simClimate, baselineSequence, rotationLength, waterSupply, elevationM, overrides]);
 
   const cropNameById = useMemo(
-    () => Object.fromEntries(crops.map((c) => [c.id, c.name.split(' (')[0]])),
+    () => Object.fromEntries(crops.map((c) => [c.id, shortCropName(c)])),
     [crops]
   );
 
@@ -358,7 +366,7 @@ export default function FutureSimulatorTab({
                   className="flex items-center justify-between gap-3 rounded-xl border border-rose-200/70 bg-rose-50/40 px-3.5 py-2.5"
                 >
                   <div>
-                    <div className="text-sm font-bold text-slate-900">{item.crop.name.split(' (')[0]}</div>
+                    <div className="text-sm font-bold text-slate-900">{shortCropName(item.crop)}</div>
                     <div className="text-[11px] text-slate-500">
                       Main stress: {item.limitingFactor}
                       {item.heatShockMonths > 0 ? ` · ${item.heatShockMonths} heat-shock mo` : ''}
@@ -404,7 +412,7 @@ export default function FutureSimulatorTab({
                     #{idx + 1}
                   </span>
                   <div>
-                    <div className="text-sm font-bold text-slate-900">{item.crop.name.split(' (')[0]}</div>
+                    <div className="text-sm font-bold text-slate-900">{shortCropName(item.crop)}</div>
                     <div className="text-[11px] text-slate-500">
                       {item.crop.waterUse} water need · {item.crop.botanicalFamily}
                     </div>

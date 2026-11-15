@@ -130,7 +130,7 @@ export default function App() {
               <Leaf className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900">FieldShift</h1>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">AgriGate</h1>
               <p className="text-xs text-slate-500">Simple Crop Rotation &amp; Weather Advisor</p>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function App() {
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 font-bold text-emerald-900">
                 <HelpCircle className="h-4 w-4 text-emerald-600" />
-                How to use FieldShift in 3 quick steps
+                How to use AgriGate in 3 quick steps
               </span>
               <button
                 type="button"

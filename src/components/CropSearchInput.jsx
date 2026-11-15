@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { shortCropName } from '../utils/cropNames.js';
 
 export default function CropSearchInput({ valueId, crops, onSelect, label }) {
   const selectedCrop = crops.find((c) => c.id === valueId);
-  const displayName = selectedCrop?.name.split(' (')[0] ?? '';
+  const displayName = shortCropName(selectedCrop);
 
   const [query, setQuery] = useState(displayName);
   const [open, setOpen] = useState(false);
@@ -27,6 +28,7 @@ export default function CropSearchInput({ valueId, crops, onSelect, label }) {
   const filtered = crops.filter(
     (c) =>
       c.name.toLowerCase().includes(query.toLowerCase()) ||
+      shortCropName(c).toLowerCase().includes(query.toLowerCase()) ||
       c.botanicalFamily.toLowerCase().includes(query.toLowerCase())
   );
 

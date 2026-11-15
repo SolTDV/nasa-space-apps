@@ -146,6 +146,7 @@
   {
     "id": "rice_paddy",
     "name": "Rice (Paddy / Lowland)",
+    "shortName": "Paddy Rice",
     "climateZones": ["tropical"],
     "botanicalFamily": "Poaceae",
     "nitrogenRole": "heavy_feeder",
@@ -170,6 +171,7 @@
   {
     "id": "rice_upland",
     "name": "Rice (Upland / Rainfed)",
+    "shortName": "Upland Rice",
     "climateZones": ["tropical"],
     "botanicalFamily": "Poaceae",
     "nitrogenRole": "heavy_feeder",

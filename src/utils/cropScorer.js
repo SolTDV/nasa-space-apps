@@ -9,6 +9,9 @@ export const GROWING_SEASON_MONTHS = { warm: 6, cool: 7 };
 
 export const FIT_WEIGHTS = { thermal: 0.35, rain: 0.3, rootMoisture: 0.2, solar: 0.15 };
 
+// Highest weather-fit score shown for a crop whose temperature fit is zero (cannot grow here).
+export const NOT_VIABLE_MAX_SCORE = 15;
+
 // ---------- Component fit functions (0-100) ----------
 
 export function thermalFitForTemp(t, optimal, lethal) {
@@ -109,12 +112,14 @@ export function scoreCrop(crop, climate, options = {}) {
   const moisture = isIrrigated ? Math.max(rawMoisture, 90) : rawMoisture;
   const solar = solarFit(avgSolar, crop.optimalSolar);
 
-  const envScore = Math.round(
+  const weightedScore = Math.round(
     FIT_WEIGHTS.thermal * thermal +
       FIT_WEIGHTS.rain * rain +
       FIT_WEIGHTS.rootMoisture * moisture +
       FIT_WEIGHTS.solar * solar
   );
+  // Too hot or too cold to grow at all: good rain and sun must not make it look like a decent fit.
+  const envScore = thermal === 0 ? Math.min(weightedScore, NOT_VIABLE_MAX_SCORE) : weightedScore;
 
   // Map 85%+ environmental suitability to ~100% attainable FAOSTAT regional yield
   const irrigationYieldBoost = isIrrigated ? 1.12 : 1.0;
@@ -169,7 +174,13 @@ const MARKET_HAIRCUT = {
   storable: { under20: 0, '20to100': 0, over100: 0.03 },
 };
 
-const IRRIGATION_COST_HA = { low: 45, medium: 95, high: 160 };
+// Estimated irrigation cost per hectare per season (pumping energy, fuel, water/canal fees), by the crop's water need.
+// ASSUMPTION: these 45 / 95 / 160 $/ha values are rough placeholders chosen for the demo, not taken from a
+// published dataset. Farmers can scale them to their own cost with the "Estimated irrigation cost" slider
+// (irrigationCostPct) on the Profit & Costs tab.
+export const IRRIGATION_COST_HA = { low: 45, medium: 95, high: 160 };
+export const IRRIGATION_COST_NOTE =
+  "Rough pumping and water cost based on the crop's water need. Change it to your own cost.";
 
 export function volatilityBadge(pct) {
   return pct <= 12 ? 'Low' : pct <= 18 ? 'Medium' : 'High';
@@ -181,6 +192,8 @@ export function computeCropEconomics(crop, score, overrides = {}) {
     costMultiplierPct = 100,
     distanceToMarket = 'under20',
     inputDiscountPct = 0,
+    waterSupply = 'rainfed',
+    irrigationCostPct = 100,
   } = overrides;
 
   const haircut = MARKET_HAIRCUT[crop.perishability]?.[distanceToMarket] ?? 0;
@@ -191,7 +204,11 @@ export function computeCropEconomics(crop, score, overrides = {}) {
   // Split input costs into 55% upfront (seed/prep) + 45% yield-dependent (fertilizer top-up/harvest/packing)
   const costScale = 0.55 + 0.45 * Math.min(1, rawMult);
   const baseCostHa = crop.benchmarkInputCostHa * costScale * (costMultiplierPct / 100);
-  const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100);
+  // Estimated irrigation cost scales with the crop's water need and the farmer's own irrigation-cost setting;
+  // the legume credit does not cut it
+  const irrigationCostHa =
+    waterSupply === 'irrigated' ? (IRRIGATION_COST_HA[crop.waterUse] ?? IRRIGATION_COST_HA.medium) * (irrigationCostPct / 100) : 0;
+  const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100) + irrigationCostHa;
 
   const revenueHa = yieldTha * priceUsdT;
   const netMarginHa = revenueHa - inputCostHa;
@@ -207,7 +224,8 @@ export function computeCropEconomics(crop, score, overrides = {}) {
     priceUsdT: Math.round(priceUsdT * 100) / 100,
     revenueHa: Math.round(revenueHa),
     inputCostHa: Math.round(inputCostHa),
-    fertilizerSavedHa: Math.round(baseCostHa - inputCostHa),
+    irrigationCostHa: Math.round(irrigationCostHa),
+    fertilizerSavedHa: Math.round(baseCostHa * (inputDiscountPct / 100)),
     netMarginHa: Math.round(netMarginHa),
     waterReturnPerMm: Math.round((netMarginHa / waterMm) * 100) / 100,
     volatility: volatilityBadge(crop.priceVolatilityPct),

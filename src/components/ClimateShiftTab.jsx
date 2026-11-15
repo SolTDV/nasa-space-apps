@@ -5,6 +5,7 @@ import { MONTH_NAMES } from '../utils/nasaApi.js';
 function LineComparisonChart({
   title,
   unit,
+  tooltipUnit = unit,
   subtitle,
   baseSeries,
   recentSeries,
@@ -54,11 +55,11 @@ function LineComparisonChart({
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs tabular-nums">
             <span className="font-bold text-slate-800">{MONTH_NAMES[activeIdx]}:</span>
             <span className="text-slate-500">
-              Base <strong>{activeBase.toFixed(decimals)}{unit}</strong>
+              Base <strong>{activeBase.toFixed(decimals)}{tooltipUnit}</strong>
             </span>
             <span className="text-slate-300">→</span>
             <span className="font-bold" style={{ color: colorHex }}>
-              {activeRec.toFixed(decimals)}{unit}
+              {activeRec.toFixed(decimals)}{tooltipUnit}
             </span>
             <span
               className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
@@ -503,8 +504,9 @@ export default function ClimateShiftTab({ climate }) {
         />
 
         <LineComparisonChart
-          title="Surface Solar Radiation (kWh/m²/day)"
+          title="Surface Solar Radiation (MJ/m²/day)"
           unit=""
+          tooltipUnit=" MJ/m²/day"
           subtitle="Incident shortwave energy available for photosynthesis"
           baseSeries={baseMonthly.map((m) => m.solar)}
           recentSeries={recentMonthly.map((m) => m.solar)}
