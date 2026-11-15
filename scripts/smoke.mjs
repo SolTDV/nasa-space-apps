@@ -15,16 +15,16 @@ assert(new Set(crops.map(c => c.id)).size === crops.length, 'crop ids are unique
 
 // --- synthetic NASA response (with -999 and YYYY13)
 function fake({ water = false } = {}) {
-  const p = Object.fromEntries(['T2M','T2M_MAX','T2M_MIN','PRECTOTCORR','GWETROOT','ALLSKY_SFC_SW_DWN'].map(k => [k, {}]));
+  const p = Object.fromEntries(['T2M','T2M_RANGE','PRECTOTCORR','GWETROOT','ALLSKY_SFC_SW_DWN'].map(k => [k, {}]));
   for (let y = 2006; y <= 2025; y++) {
     for (let m = 1; m <= 13; m++) {
       const k = `${y}${String(m).padStart(2,'0')}`;
       const t = 10 + 12 * Math.sin(((m - 4) / 12) * 2 * Math.PI) + (y >= 2021 ? 0.8 : 0);
-      p.T2M[k] = t; p.T2M_MAX[k] = t + 6; p.T2M_MIN[k] = t - 6;
+      p.T2M[k] = t; p.T2M_RANGE[k] = 12;
       p.PRECTOTCORR[k] = 2.5; p.GWETROOT[k] = water ? -999 : 0.55; p.ALLSKY_SFC_SW_DWN[k] = 15;
     }
   }
-  p.T2M['202301'] = -999; p.T2M_MAX['202301'] = -999;   // single missing month
+  p.T2M['202301'] = -999; p.T2M_RANGE['202301'] = -999;   // single missing month
   p.T2M['200613'] = 999;                                // annual key must be ignored
   return { properties: { parameter: p } };
 }
@@ -33,6 +33,8 @@ assert(!live.isWaterBody && !live.isFallback && live.baseline20Yr.monthly.length
 assert(Math.abs(live.baseline20Yr.annualRainMm - 2.5 * 30.4 * 12) < 1, 'PRECTOTCORR x30.4 summed = ' + live.baseline20Yr.annualRainMm);
 assert(live.deltas.tempDeltaC > 0.5 && live.deltas.tempDeltaC < 1.1, 'temp delta ' + live.deltas.tempDeltaC);
 assert(parseNasaResponse(fake({ water: true }), 0, 0).isWaterBody === true, 'all -999 -> isWaterBody');
+const jul = live.baseline20Yr.monthly[6];
+assert(Math.abs(jul.maxTemp - (jul.temp + 6)) < 0.01 && Math.abs(jul.minTemp - (jul.temp - 6)) < 0.01, 'maxTemp/minTemp = T2M +/- T2M_RANGE/2 (typical day, not monthly extreme)');
 
 // --- fallback via real fetch (sandbox has no NASA access -> must fall back, never throw)
 const t0 = Date.now();

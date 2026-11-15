@@ -11,7 +11,10 @@ export const REQUEST_TIMEOUT_MS = 8000;
 // PRECTOTCORR in NASA POWER monthly "ag" output is mm/day -> approx. mm/month.
 const DAYS_PER_MONTH = 30.4;
 
-const PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'PRECTOTCORR', 'GWETROOT', 'ALLSKY_SFC_SW_DWN'];
+// Monthly T2M_MAX / T2M_MIN are the single hottest / coldest reading of the month, not daily averages.
+// T2M_RANGE is the average daily range, so T2M +/- T2M_RANGE / 2 gives the typical afternoon high and
+// night low, which is what crop thresholds (and the fallback profiles) mean.
+const PARAMS = ['T2M', 'T2M_RANGE', 'PRECTOTCORR', 'GWETROOT', 'ALLSKY_SFC_SW_DWN'];
 
 const r1 = (v) => Math.round(v * 10) / 10;
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -90,8 +93,8 @@ function bucketsToMonthly(b) {
   return MONTH_NAMES.map((month, i) => ({
     month,
     temp: r2(series.T2M[i]),
-    maxTemp: r2(series.T2M_MAX[i]),
-    minTemp: r2(series.T2M_MIN[i]),
+    maxTemp: r2(series.T2M[i] + series.T2M_RANGE[i] / 2),
+    minTemp: r2(series.T2M[i] - series.T2M_RANGE[i] / 2),
     rainMm: r1(series.PRECTOTCORR[i] * DAYS_PER_MONTH),
     gwetRoot: r3(Math.min(1, Math.max(0, series.GWETROOT[i]))),
     solar: r2(series.ALLSKY_SFC_SW_DWN[i]),
