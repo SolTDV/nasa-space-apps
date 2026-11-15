@@ -49,6 +49,7 @@ export function buildContext(crops, climate, options = {}) {
     soilPh: options.soilPh ?? 'Unknown',
     slopingLand: Boolean(options.slopingLand),
     overrides: options.overrides ?? {},
+    waterSupply: options.waterSupply ?? 'rainfed',
   };
 }
 
@@ -168,7 +169,7 @@ export function evaluateRotation(cropIds, ctx) {
     cropId: crop.id,
     cropName: crop.name,
     envScore: scores[i].envScore,
-    ...computeCropEconomics(crop, scores[i], { ...ctx.overrides, inputDiscountPct: discounts[i] }),
+    ...computeCropEconomics(crop, scores[i], { ...ctx.overrides, waterSupply: ctx.waterSupply, inputDiscountPct: discounts[i] }),
   }));
 
   const ruleScore = clamp(Math.round(((raw + 70) / RAW_SPAN) * 100), 0, 100);

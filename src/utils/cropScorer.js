@@ -186,6 +186,7 @@ export function computeCropEconomics(crop, score, overrides = {}) {
     costMultiplierPct = 100,
     distanceToMarket = 'under20',
     inputDiscountPct = 0,
+    waterSupply = 'rainfed',
   } = overrides;
 
   const haircut = MARKET_HAIRCUT[crop.perishability]?.[distanceToMarket] ?? 0;
@@ -196,7 +197,10 @@ export function computeCropEconomics(crop, score, overrides = {}) {
   // Split input costs into 55% upfront (seed/prep) + 45% yield-dependent (fertilizer top-up/harvest/packing)
   const costScale = 0.55 + 0.45 * Math.min(1, rawMult);
   const baseCostHa = crop.benchmarkInputCostHa * costScale * (costMultiplierPct / 100);
-  const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100);
+  // Irrigation (pumping, fuel, canal fees) scales with the crop's water need; the legume credit does not cut it
+  const irrigationCostHa =
+    waterSupply === 'irrigated' ? (IRRIGATION_COST_HA[crop.waterUse] ?? IRRIGATION_COST_HA.medium) * (costMultiplierPct / 100) : 0;
+  const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100) + irrigationCostHa;
 
   const revenueHa = yieldTha * priceUsdT;
   const netMarginHa = revenueHa - inputCostHa;
@@ -212,7 +216,8 @@ export function computeCropEconomics(crop, score, overrides = {}) {
     priceUsdT: Math.round(priceUsdT * 100) / 100,
     revenueHa: Math.round(revenueHa),
     inputCostHa: Math.round(inputCostHa),
-    fertilizerSavedHa: Math.round(baseCostHa - inputCostHa),
+    irrigationCostHa: Math.round(irrigationCostHa),
+    fertilizerSavedHa: Math.round(baseCostHa * (inputDiscountPct / 100)),
     netMarginHa: Math.round(netMarginHa),
     waterReturnPerMm: Math.round((netMarginHa / waterMm) * 100) / 100,
     volatility: volatilityBadge(crop.priceVolatilityPct),

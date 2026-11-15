@@ -144,6 +144,7 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
             <h2 className="text-base font-bold text-slate-900">Step 2: Estimated Profit per Hectare ($/ha)</h2>
             <p className="text-xs text-slate-500">
               Sorted from highest net profit to lowest based on your local weather fit and prices.
+              {overrides.waterSupply === 'irrigated' && ' Input costs include irrigation (pumping, fuel, canal fees).'}
             </p>
           </div>
 

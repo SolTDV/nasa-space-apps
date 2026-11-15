@@ -68,5 +68,11 @@ const ks = getFallbackClimate(38.48, -100.9);
 const fitIrr = scoreAllCrops(crops, ks, { waterSupply: 'irrigated' }).find(r => r.crop.id === 'maize').score.envScore;
 const rotIrr = generateRotations(crops, ks, { currentCropId: 'maize', waterSupply: 'irrigated' }).baseline.perSeason[0].envScore;
 assert(fitIrr === rotIrr, `irrigated maize fit: Crop tab ${fitIrr}% = Rotation tab ${rotIrr}%`);
+// --- irrigation is not free
+{ const { computeCropEconomics, scoreCrop } = await import('../src/utils/cropScorer.js');
+  const maize = crops.find(c => c.id === 'maize');
+  const irr = computeCropEconomics(maize, scoreCrop(maize, ks, { waterSupply: 'irrigated' }), { waterSupply: 'irrigated' });
+  const dry = computeCropEconomics(maize, scoreCrop(maize, ks, { waterSupply: 'irrigated' }), {});
+  assert(irr.irrigationCostHa > 0 && irr.inputCostHa === dry.inputCostHa + irr.irrigationCostHa, `irrigated maize pays $${irr.irrigationCostHa}/ha irrigation`); }
 const iowa = generateRotations(crops, getFallbackClimate(42.03,-93.631), { currentCropId:'maize' });
 console.log('\nChecklist sample:', iowa.adapted[0].checklist);
