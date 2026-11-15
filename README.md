@@ -1,4 +1,4 @@
-# FieldShift — Adaptive Crop Rotation Decision Support
+# AgriGate — Adaptive Crop Rotation Decision Support
 NASA Space Apps 2026 · React 18 + Vite + Tailwind · 100% client-side (one live call to NASA POWER).
 
     npm install
