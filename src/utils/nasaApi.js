@@ -112,6 +112,8 @@ export function parseNasaResponse(json, lat, lon) {
 
   const baseBuckets = emptyBuckets();
   const recentBuckets = emptyBuckets();
+  // Month-by-month history (not just averages), used to train the hidden soil-moisture model
+  const monthlySeries = [];
 
   const keys = Object.keys(param.T2M ?? param[PARAMS[0]] ?? {});
   for (const key of keys) {
@@ -127,6 +129,19 @@ export function parseNasaResponse(json, lat, lon) {
       baseBuckets[p][month - 1].push(v);
       if (year >= RECENT_START_YEAR) recentBuckets[p][month - 1].push(v);
     }
+
+    const valid = (p) => {
+      const v = param[p]?.[key];
+      return typeof v === 'number' && Number.isFinite(v) && v > -998 ? v : null;
+    };
+    const rainPerDay = valid('PRECTOTCORR');
+    monthlySeries.push({
+      year,
+      month,
+      temp: valid('T2M'),
+      rainMm: rainPerDay === null ? null : rainPerDay * DAYS_PER_MONTH,
+      gwetRoot: valid('GWETROOT'),
+    });
   }
 
   const hasData = (b, p) => b[p].some((vals) => vals.length > 0);
@@ -146,7 +161,7 @@ export function parseNasaResponse(json, lat, lon) {
     baseline20Yr: summarizePeriod(baseMonthly),
     recent5Yr: summarizePeriod(recentMonthly),
     isFallback: false,
-    extra: { source: 'NASA POWER (live)' },
+    extra: { source: 'NASA POWER (live)', monthlySeries },
   });
 }
 
