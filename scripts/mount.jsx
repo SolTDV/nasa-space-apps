@@ -14,7 +14,7 @@ const check = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.e
 
 await act(async () => { root.render(React.createElement(App)); });
 await wait(200);
-check(text().includes('FieldShift') && text().includes('Local Soil & Market Discretion Preserved'), 'header + badge render');
+check(text().includes('AgriGate') && text().includes('Local Soil & Market Discretion Preserved'), 'header + badge render');
 check(document.querySelectorAll('.fs-pin').length === 1 || document.querySelector('.leaflet-container'), 'leaflet map mounted with divIcon marker');
 check(text().includes('Adaptation Signal') && text().includes('Extreme Heat Months'), 'Tab 1 renders (KPIs + Adaptation Signal)');
 check(text().includes('illustrative data'), 'fallback banner shown when offline');

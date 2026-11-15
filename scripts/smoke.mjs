@@ -37,7 +37,7 @@ function fake({ water = false } = {}) {
 }
 // --- page title / description match the app name
 const html = fs.readFileSync('index.html', 'utf8');
-assert(html.includes('<title>FieldShift — Crop Rotation &amp; Weather Advisor</title>') && /<meta\s+name="description"\s+content="FieldShift/.test(html), 'index.html title + meta description say FieldShift');
+assert(html.includes('<title>AgriGate — Crop Rotation &amp; Weather Advisor</title>') && /<meta\s+name="description"\s+content="AgriGate/.test(html), 'index.html title + meta description say AgriGate');
 const live = parseNasaResponse(fake(), 40, -90);
 assert(!live.isWaterBody && !live.isFallback && live.baseline20Yr.monthly.length === 12, 'live parse -> 12 monthly rows');
 assert(Math.abs(live.baseline20Yr.annualRainMm - 2.5 * 30.4 * 12) < 1, 'PRECTOTCORR x30.4 summed = ' + live.baseline20Yr.annualRainMm);

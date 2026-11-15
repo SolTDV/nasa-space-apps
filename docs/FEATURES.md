@@ -1,6 +1,6 @@
-# FieldShift: Features and How Farmers Use It
+# AgriGate: Features and How Farmers Use It
 
-**FieldShift turns 20 years of NASA POWER climate data for a farmer's own field into three answers:
+**AgriGate turns 20 years of NASA POWER climate data for a farmer's own field into three answers:
 what to plant next, whether it pays, and how the plan holds up in a hotter, drier future.**
 
 Live app: https://nasa-space-apps-blond.vercel.app/ · Built for NASA Space Apps Challenge 2026, challenge
@@ -164,7 +164,7 @@ on Earth.
 - NASA data cannot see soil pH, texture, salinity, pests or local prices; the checklist and the price sliders
   hand those back to the farmer.
 - Scenario presets are illustrative, not downscaled climate projections.
-- FieldShift supports a farmer's decision. It does not replace local extension advice.
+- AgriGate supports a farmer's decision. It does not replace local extension advice.
 
 ## Under the hood
 
