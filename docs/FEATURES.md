@@ -40,7 +40,7 @@ Pin your field ──► NASA POWER (monthly, 2006–2025) + elevation
 | NASA POWER `T2M`, `T2M_MAX`, `T2M_MIN` | Monthly air temperature | Crop temperature fit, heat-stress months |
 | NASA POWER `PRECTOTCORR` | Monthly rainfall | Rain fit, dryland and waterlogging rules |
 | NASA POWER `GWETROOT` | Root-zone soil wetness | Moisture fit, soil water outlook |
-| NASA POWER `ALLSKY_SFC_SW_DWN` | Sunlight reaching the ground | Light fit for crops |
+| NASA POWER `ALLSKY_SFC_SW_DWN` | Sunlight reaching the ground (MJ/m²/day) | Light fit for crops |
 | Open-Meteo (SRTM) | Elevation | Shown with the farm details |
 | FAO GAEZ / FAOSTAT | Crop temperature and water ranges, yields, prices | Crop thresholds and profit baselines |
 

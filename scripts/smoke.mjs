@@ -17,6 +17,9 @@ assert(new Set(crops.map(c => c.id)).size === crops.length, 'crop ids are unique
   const dup = names.filter((n, i) => names.indexOf(n) !== i);
   assert(dup.length === 0, `short display names are unique${dup.length ? ' (duplicates: ' + dup.join(', ') + ')' : ''} (rice: ${shortCropName(crops.find(c => c.id === 'rice_paddy'))} / ${shortCropName(crops.find(c => c.id === 'rice_upland'))})`); }
 
+// --- solar radiation: NASA POWER monthly (community=ag) returns ALLSKY_SFC_SW_DWN in MJ/m^2/day
+{ const src = ['src/components/ClimateShiftTab.jsx', 'src/components/CropFitTab.jsx', 'src/components/FutureSimulatorTab.jsx'].map(f => fs.readFileSync(f, 'utf8')).join('');
+  assert(src.includes('Solar Radiation (MJ/m²/day)') && !/kWh/i.test(src), 'solar radiation labelled MJ/m²/day, never kWh'); }
 // --- synthetic NASA response (with -999 and YYYY13)
 function fake({ water = false } = {}) {
   const p = Object.fromEntries(['T2M','T2M_RANGE','PRECTOTCORR','GWETROOT','ALLSKY_SFC_SW_DWN'].map(k => [k, {}]));

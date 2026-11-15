@@ -97,7 +97,7 @@ function bucketsToMonthly(b) {
     minTemp: r2(series.T2M[i] - series.T2M_RANGE[i] / 2),
     rainMm: r1(series.PRECTOTCORR[i] * DAYS_PER_MONTH),
     gwetRoot: r3(Math.min(1, Math.max(0, series.GWETROOT[i]))),
-    solar: r2(series.ALLSKY_SFC_SW_DWN[i]),
+    solar: r2(series.ALLSKY_SFC_SW_DWN[i]), // MJ/m²/day (unit in the API response with community=ag)
   }));
 }
 
