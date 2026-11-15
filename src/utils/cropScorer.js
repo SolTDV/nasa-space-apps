@@ -174,7 +174,13 @@ const MARKET_HAIRCUT = {
   storable: { under20: 0, '20to100': 0, over100: 0.03 },
 };
 
-const IRRIGATION_COST_HA = { low: 45, medium: 95, high: 160 };
+// Estimated irrigation cost per hectare per season (pumping energy, fuel, water/canal fees), by the crop's water need.
+// ASSUMPTION: these 45 / 95 / 160 $/ha values are rough placeholders chosen for the demo, not taken from a
+// published dataset. Farmers can scale them to their own cost with the "Estimated irrigation cost" slider
+// (irrigationCostPct) on the Profit & Costs tab.
+export const IRRIGATION_COST_HA = { low: 45, medium: 95, high: 160 };
+export const IRRIGATION_COST_NOTE =
+  "Rough pumping and water cost based on the crop's water need. Change it to your own cost.";
 
 export function volatilityBadge(pct) {
   return pct <= 12 ? 'Low' : pct <= 18 ? 'Medium' : 'High';
@@ -187,6 +193,7 @@ export function computeCropEconomics(crop, score, overrides = {}) {
     distanceToMarket = 'under20',
     inputDiscountPct = 0,
     waterSupply = 'rainfed',
+    irrigationCostPct = 100,
   } = overrides;
 
   const haircut = MARKET_HAIRCUT[crop.perishability]?.[distanceToMarket] ?? 0;
@@ -197,9 +204,10 @@ export function computeCropEconomics(crop, score, overrides = {}) {
   // Split input costs into 55% upfront (seed/prep) + 45% yield-dependent (fertilizer top-up/harvest/packing)
   const costScale = 0.55 + 0.45 * Math.min(1, rawMult);
   const baseCostHa = crop.benchmarkInputCostHa * costScale * (costMultiplierPct / 100);
-  // Irrigation (pumping, fuel, canal fees) scales with the crop's water need; the legume credit does not cut it
+  // Estimated irrigation cost scales with the crop's water need and the farmer's own irrigation-cost setting;
+  // the legume credit does not cut it
   const irrigationCostHa =
-    waterSupply === 'irrigated' ? (IRRIGATION_COST_HA[crop.waterUse] ?? IRRIGATION_COST_HA.medium) * (costMultiplierPct / 100) : 0;
+    waterSupply === 'irrigated' ? (IRRIGATION_COST_HA[crop.waterUse] ?? IRRIGATION_COST_HA.medium) * (irrigationCostPct / 100) : 0;
   const inputCostHa = baseCostHa * (1 - inputDiscountPct / 100) + irrigationCostHa;
 
   const revenueHa = yieldTha * priceUsdT;

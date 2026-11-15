@@ -78,6 +78,8 @@ assert(fitIrr === rotIrr, `irrigated maize fit: Crop tab ${fitIrr}% = Rotation t
   const maize = crops.find(c => c.id === 'maize');
   const irr = computeCropEconomics(maize, scoreCrop(maize, ks, { waterSupply: 'irrigated' }), { waterSupply: 'irrigated' });
   const dry = computeCropEconomics(maize, scoreCrop(maize, ks, { waterSupply: 'irrigated' }), {});
-  assert(irr.irrigationCostHa > 0 && irr.inputCostHa === dry.inputCostHa + irr.irrigationCostHa, `irrigated maize pays $${irr.irrigationCostHa}/ha irrigation`); }
+  assert(irr.irrigationCostHa > 0 && irr.inputCostHa === dry.inputCostHa + irr.irrigationCostHa, `irrigated maize pays $${irr.irrigationCostHa}/ha irrigation`);
+  const own = computeCropEconomics(maize, scoreCrop(maize, ks, { waterSupply: 'irrigated' }), { waterSupply: 'irrigated', irrigationCostPct: 50 });
+  assert(own.irrigationCostHa === Math.round(irr.irrigationCostHa / 2), `farmer can set own irrigation cost (50% -> $${own.irrigationCostHa}/ha)`); }
 const iowa = generateRotations(crops, getFallbackClimate(42.03,-93.631), { currentCropId:'maize' });
 console.log('\nChecklist sample:', iowa.adapted[0].checklist);

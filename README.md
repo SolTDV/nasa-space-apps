@@ -13,6 +13,14 @@ Tests (no framework needed):
       --external:react-dom/client --external:react-leaflet --external:leaflet --external:recharts \
       --external:lucide-react --outfile=scripts/mount.bundle.mjs && node scripts/mount.bundle.mjs
 
+## Estimated irrigation cost
+
+When the farm is set to **Irrigated**, every crop pays an *estimated irrigation cost* per hectare per season
+(pumping energy, fuel, water/canal fees) by its water need: low 45 $/ha, medium 95 $/ha, high 160 $/ha
+(`IRRIGATION_COST_HA` in `src/utils/cropScorer.js`). **These values are an assumption** for the demo, not taken
+from a published dataset. The Profit & Costs tab has an "Estimated irrigation cost" slider (0–300 %) so farmers
+can change it to their own cost; it is not reduced by the legume nitrogen credit.
+
 ## Soil Water Outlook (Future Simulator)
 
 Farmers see one plain verdict ("Watch out in Feb–Mar", "Water shortage risk") plus a 12-month strip.

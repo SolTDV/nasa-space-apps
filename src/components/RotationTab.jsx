@@ -13,6 +13,7 @@ import {
   Sprout,
 } from 'lucide-react';
 import { generateRotations, pickForGoal } from '../utils/rotationEngine.js';
+import { IRRIGATION_COST_NOTE } from '../utils/cropScorer.js';
 import CropSearchInput from './CropSearchInput.jsx';
 
 const PRIORITY_OPTIONS = [
@@ -166,6 +167,10 @@ export default function RotationTab({
   const totalBaseProfit = baseline.netProfit3Yr * farmSizeHa;
   const totalCandProfit = candidate.netProfit3Yr * farmSizeHa;
   const totalProfitDelta = d.profitDelta * farmSizeHa;
+
+  const sumIrrigation = (rot) => rot.perSeason.reduce((s, p) => s + (p.irrigationCostHa ?? 0), 0);
+  const candIrrigation = sumIrrigation(candidate) * farmSizeHa;
+  const baseIrrigation = sumIrrigation(baseline) * farmSizeHa;
 
   const totalBaseFert = baseline.fertilizerSaved * farmSizeHa;
   const totalCandFert = candidate.fertilizerSaved * farmSizeHa;
@@ -431,6 +436,16 @@ export default function RotationTab({
               </div>
             )}
           </div>
+
+          {candIrrigation > 0 && (
+            <div className="mt-2 rounded-lg bg-sky-50 px-2.5 py-1.5 text-[11px] text-sky-900">
+              <div>
+                Estimated irrigation cost: <strong className="tabular-nums">{usd(candIrrigation)}</strong>
+                <span className="text-sky-700"> (current plan {usd(baseIrrigation)})</span>
+              </div>
+              <div className="mt-0.5 text-sky-700">{IRRIGATION_COST_NOTE}</div>
+            </div>
+          )}
 
           <div className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
             {hasCustomEconomics ? (
