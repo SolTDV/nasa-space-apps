@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -113,6 +113,13 @@ export default function FutureSimulatorTab({
       rainPct: Math.round(clamp(rawR, -30, 25)),
     };
   }, [climate]);
+
+  // Keep the sliders on the local trend when the farm location (and so the NASA trend) changes
+  useEffect(() => {
+    if (scenarioId !== 'local_trend') return;
+    setCustomTemp(extrapolated.tempDelta);
+    setCustomRain(extrapolated.rainPct);
+  }, [scenarioId, extrapolated.tempDelta, extrapolated.rainPct]);
 
   const handleSelectScenario = (sc) => {
     setScenarioId(sc.id);
