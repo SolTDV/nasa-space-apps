@@ -2,6 +2,7 @@
 // rules, penalizes stacked perishable market risk, and ensures recommendations improve on baseline.
 
 import { scoreCrop, computeCropEconomics } from './cropScorer.js';
+import { shortCropName } from './cropNames.js';
 
 export const DRYLAND_RAIN_MM = 550;
 export const WATERLOGGING_RAIN_MM = 1100;
@@ -16,7 +17,7 @@ const RAW_SPAN = 180;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const mean = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
-const shortName = (crop) => crop.name.split(' (')[0];
+const shortName = shortCropName;
 const badge = (id, label, tone) => ({ id, label, tone });
 
 export const STRATEGIES = [

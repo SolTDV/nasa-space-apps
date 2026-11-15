@@ -12,6 +12,10 @@ const keys = ['id','name','botanicalFamily','nitrogenRole','rootDepth','residueL
 const missing = crops.flatMap(c => keys.filter(k => !(k in c)).map(k => `${c.id}.${k}`));
 assert(crops.length >= 30 && missing.length === 0, `${crops.length} crops follow schema${missing.length ? ' (missing: ' + missing.join(', ') + ')' : ''}`);
 assert(new Set(crops.map(c => c.id)).size === crops.length, 'crop ids are unique');
+{ const { shortCropName } = await import('../src/utils/cropNames.js');
+  const names = crops.map(shortCropName);
+  const dup = names.filter((n, i) => names.indexOf(n) !== i);
+  assert(dup.length === 0, `short display names are unique${dup.length ? ' (duplicates: ' + dup.join(', ') + ')' : ''} (rice: ${shortCropName(crops.find(c => c.id === 'rice_paddy'))} / ${shortCropName(crops.find(c => c.id === 'rice_upland'))})`); }
 
 // --- synthetic NASA response (with -999 and YYYY13)
 function fake({ water = false } = {}) {

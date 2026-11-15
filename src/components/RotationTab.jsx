@@ -15,6 +15,7 @@ import {
 import { generateRotations, pickForGoal } from '../utils/rotationEngine.js';
 import { IRRIGATION_COST_NOTE } from '../utils/cropScorer.js';
 import CropSearchInput from './CropSearchInput.jsx';
+import { shortCropName } from '../utils/cropNames.js';
 
 const PRIORITY_OPTIONS = [
   {
@@ -131,7 +132,7 @@ export default function RotationTab({
 
   const canResetBaseline = !baselineSequence.every((id) => id === presetCrop);
 
-  const cropNameById = useMemo(() => Object.fromEntries(crops.map((c) => [c.id, c.name.split(' (')[0]])), [crops]);
+  const cropNameById = useMemo(() => Object.fromEntries(crops.map((c) => [c.id, shortCropName(c)])), [crops]);
   const cropById = useMemo(() => Object.fromEntries(crops.map((c) => [c.id, c])), [crops]);
 
   const result = useMemo(

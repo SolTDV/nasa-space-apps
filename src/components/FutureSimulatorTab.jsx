@@ -13,6 +13,7 @@ import { generateRotations } from '../utils/rotationEngine.js';
 import { MONTH_NAMES } from '../utils/nasaApi.js';
 import { assessWaterRisk, isUsable, simulateSoil, trainSoilModel } from '../utils/soilMoistureModel.js';
 import WaterRiskCard from './WaterRiskCard.jsx';
+import { shortCropName } from '../utils/cropNames.js';
 
 const SCENARIOS = [
   {
@@ -186,7 +187,7 @@ export default function FutureSimulatorTab({
   }, [crops, simClimate, baselineSequence, rotationLength, waterSupply, elevationM, overrides]);
 
   const cropNameById = useMemo(
-    () => Object.fromEntries(crops.map((c) => [c.id, c.name.split(' (')[0]])),
+    () => Object.fromEntries(crops.map((c) => [c.id, shortCropName(c)])),
     [crops]
   );
 
@@ -358,7 +359,7 @@ export default function FutureSimulatorTab({
                   className="flex items-center justify-between gap-3 rounded-xl border border-rose-200/70 bg-rose-50/40 px-3.5 py-2.5"
                 >
                   <div>
-                    <div className="text-sm font-bold text-slate-900">{item.crop.name.split(' (')[0]}</div>
+                    <div className="text-sm font-bold text-slate-900">{shortCropName(item.crop)}</div>
                     <div className="text-[11px] text-slate-500">
                       Main stress: {item.limitingFactor}
                       {item.heatShockMonths > 0 ? ` · ${item.heatShockMonths} heat-shock mo` : ''}
@@ -404,7 +405,7 @@ export default function FutureSimulatorTab({
                     #{idx + 1}
                   </span>
                   <div>
-                    <div className="text-sm font-bold text-slate-900">{item.crop.name.split(' (')[0]}</div>
+                    <div className="text-sm font-bold text-slate-900">{shortCropName(item.crop)}</div>
                     <div className="text-[11px] text-slate-500">
                       {item.crop.waterUse} water need · {item.crop.botanicalFamily}
                     </div>

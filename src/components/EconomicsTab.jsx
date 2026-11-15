@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Coins, Droplets, RotateCcw, Search, Truck } from 'lucide-react';
 import { DISTANCE_OPTIONS, IRRIGATION_COST_HA, IRRIGATION_COST_NOTE, computeCropEconomics } from '../utils/cropScorer.js';
+import { shortCropName } from '../utils/cropNames.js';
 
 export const DEFAULT_OVERRIDES = {
   priceMultiplierPct: 100,
@@ -29,7 +30,7 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return scored
-      .filter(({ crop }) => !q || crop.name.toLowerCase().includes(q))
+      .filter(({ crop }) => !q || crop.name.toLowerCase().includes(q) || shortCropName(crop).toLowerCase().includes(q))
       .map(({ crop, score }) => ({
         crop,
         score,
@@ -214,7 +215,7 @@ export default function EconomicsTab({ scored = [], overrides = DEFAULT_OVERRIDE
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{crop.name.split(' (')[0]}</span>
+                        <span className="font-bold text-slate-900">{shortCropName(crop)}</span>
                         {isCurrent && (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                             Your Crop
